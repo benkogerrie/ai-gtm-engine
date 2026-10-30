@@ -29,9 +29,9 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Health check: [http://localhost:3000/api/health](http://localhost:3000/api/health).
+Open [http://localhost:3000](http://localhost:3000). Health check: [http://localhost:3000/api/health](http://localhost:3000/api/health). Search provider health (env only, no Brave call): [http://localhost:3000/api/search/health](http://localhost:3000/api/search/health).
 
-`.env.example` lists empty, commented placeholders for future integrations (LLM provider, Tavily, Serper, Neo4j / Kùzu, Hunter, Apollo, SendGrid, Flexprice). Do not put real secrets in the repository.
+`.env.example` lists empty, commented placeholders for future integrations (LLM provider, Brave Search, Tavily, Serper, Neo4j / Kùzu, Hunter, Apollo, SendGrid, Flexprice). Do not put real secrets in the repository. Search usage is documented in [`docs/search.md`](./docs/search.md).
 
 ## Scripts
 
@@ -42,7 +42,8 @@ Open [http://localhost:3000](http://localhost:3000). Health check: [http://local
 | `start` | `pnpm start` | Serve the production build |
 | `lint` | `pnpm lint` | ESLint |
 | `typecheck` | `pnpm typecheck` | `tsc --noEmit` |
-| `test` | `pnpm test` | Vitest (single run) |
+| `test` | `pnpm test` | Vitest (single run; excludes live smoke) |
+| `test:live` | `pnpm test:live` | Optional Brave Search smoke; skips if `BRAVE_SEARCH_API_KEY` is unset |
 
 ## CI
 
