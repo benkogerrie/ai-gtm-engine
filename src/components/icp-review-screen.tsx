@@ -3,6 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { StructuredIcp } from "@/domain";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
 
 export type ReviewIcp = {
   id: string;
@@ -14,18 +21,10 @@ export type ReviewIcp = {
 };
 
 function ConfidenceBadge({ value }: { value: number }) {
-  const tone =
-    value >= 0.75
-      ? "border-emerald-300 text-emerald-800"
-      : value >= 0.5
-        ? "border-amber-300 text-amber-800"
-        : "border-[var(--rule)] text-[var(--muted)]";
   return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] tabular-nums ${tone}`}
-    >
+    <Badge variant="inferred">
       {value.toFixed(2)} · INFERRED
-    </span>
+    </Badge>
   );
 }
 
@@ -60,9 +59,14 @@ export function IcpReviewScreen({
   const [adjusting, setAdjusting] = useState<string | null>(null);
   const [adjustNote, setAdjustNote] = useState("");
   const [pending, setPending] = useState(false);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
 
-  async function run(work: () => Promise<{ error?: string } | void>) {
+  async function run(
+    work: () => Promise<{ error?: string } | void>,
+    action?: string,
+  ) {
     setPending(true);
+    setPendingAction(action ?? null);
     setError(null);
     try {
       const result = await work();
@@ -71,15 +75,18 @@ export function IcpReviewScreen({
       }
     } finally {
       setPending(false);
+      setPendingAction(null);
     }
   }
+
+  const findingProspects = pending && pendingAction === "find";
 
   return (
     <div className="space-y-8">
       {icp.inferenceMode === "mock" ? (
         <p
           data-testid="mock-banner"
-          className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm"
+          className="rounded-md border border-accent bg-accent px-3 py-2 text-sm text-accent-foreground"
         >
           MOCK output — generated without DEEPSEEK_API_KEY.
         </p>
@@ -87,75 +94,86 @@ export function IcpReviewScreen({
 
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs tracking-[0.18em] text-[var(--muted)] uppercase">
+          <p className="text-xs text-muted-foreground uppercase">
             {productName} · v{icp.version} · {icp.status}
           </p>
           <h1 className="font-serif mt-2 text-3xl tracking-tight">{structured.name}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {icp.status === "DRAFT" && onApprove ? (
-            <button
+            <Button
               type="button"
               disabled={pending}
-              onClick={() => run(() => onApprove(icp.id))}
-              className="rounded-md bg-[var(--foreground)] px-4 py-2 text-sm text-[var(--background)] disabled:opacity-50"
+              onClick={() => run(() => onApprove(icp.id), "approve")}
             >
-              Approve ICP
-            </button>
+              {pending && pendingAction === "approve" ? (
+                <>
+                  <Spinner />
+                  Approving…
+                </>
+              ) : (
+                "Approve ICP"
+              )}
+            </Button>
           ) : (
-            <span className="rounded-full border border-[var(--rule)] px-3 py-1 text-xs uppercase">
-              {icp.status}
-            </span>
+            <Badge variant="outline">{icp.status}</Badge>
           )}
           {icp.status === "APPROVED" && onFindProspects ? (
-            <button
+            <Button
               type="button"
               disabled={pending}
-              onClick={() => run(() => onFindProspects(icp.id))}
-              className="rounded-md bg-[var(--foreground)] px-4 py-2 text-sm text-[var(--background)] disabled:opacity-50"
+              aria-busy={findingProspects}
+              onClick={() => run(() => onFindProspects(icp.id), "find")}
             >
-              Find prospects
-            </button>
+              {findingProspects ? (
+                <>
+                  <Spinner />
+                  Finding prospects…
+                </>
+              ) : (
+                "Find prospects"
+              )}
+            </Button>
           ) : null}
           {icp.status === "APPROVED" ? (
-            <Link
-              href={`/dashboard?icp=${icp.id}`}
-              className="rounded-md border border-[var(--rule)] px-4 py-2 text-sm"
-            >
-              Dashboard
-            </Link>
+            <Button asChild variant="outline">
+              <Link href={`/dashboard?icp=${icp.id}`}>Dashboard</Link>
+            </Button>
           ) : null}
         </div>
       </div>
+
+      {findingProspects ? (
+        <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Spinner />
+          Finding prospects… searching public sources for cited buyer organizations.
+        </p>
+      ) : null}
 
       {onSave ? (
         <form
           className="flex flex-wrap items-end gap-3"
           onSubmit={(event) => {
             event.preventDefault();
-            void run(() => onSave(icp.id, { name }));
+            void run(() => onSave(icp.id, { name }), "save");
           }}
         >
-          <label className="block min-w-64 flex-1 text-sm">
-            <span className="text-[var(--muted)]">ICP name</span>
-            <input
+          <Label className="min-w-64 flex-1">
+            <span className="text-muted-foreground">ICP name</span>
+            <Input
               value={name}
               onChange={(event) => setName(event.target.value)}
-              className="mt-1 w-full rounded-md border border-[var(--rule)] bg-[var(--card)] px-3 py-2"
+              className="mt-1"
             />
-          </label>
-          <button
-            type="submit"
-            disabled={pending}
-            className="rounded-md border border-[var(--rule)] px-3 py-2 text-sm"
-          >
+          </Label>
+          <Button type="submit" variant="outline" disabled={pending}>
             Save edit
-          </button>
+          </Button>
         </form>
       ) : null}
 
       {error ? (
-        <p className="text-sm text-red-800" role="alert">
+        <p className="text-sm text-destructive" role="alert">
           {error}
         </p>
       ) : null}
@@ -164,25 +182,26 @@ export function IcpReviewScreen({
         <h2 className="font-serif text-xl tracking-tight">Target industries</h2>
         <ul className="mt-3 space-y-2">
           {structured.targetIndustries.map((industry) => (
-            <li
-              key={`${industry.naics}-${industry.name}`}
-              className="rounded-lg border border-[var(--rule)] bg-[var(--card)] p-4"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-medium">
-                  {industry.naics ? `${industry.naics} · ` : ""}
-                  {industry.name}
-                </p>
-                <ConfidenceBadge value={industry.confidence} />
-              </div>
-              <p className="mt-1 text-xs text-[var(--muted)]">
-                SIC {industry.sic ?? "—"}
-                {industry.naics
-                  ? industry.naicsValidation.known
-                    ? ` · NAICS known${industry.naicsValidation.label ? ` (${industry.naicsValidation.label})` : ""}`
-                    : " · NAICS flagged unknown (not invented)"
-                  : " · no NAICS"}
-              </p>
+            <li key={`${industry.naics}-${industry.name}`}>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-medium">
+                      {industry.naics ? `${industry.naics} · ` : ""}
+                      {industry.name}
+                    </p>
+                    <ConfidenceBadge value={industry.confidence} />
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    SIC {industry.sic ?? "—"}
+                    {industry.naics
+                      ? industry.naicsValidation.known
+                        ? ` · NAICS known${industry.naicsValidation.label ? ` (${industry.naicsValidation.label})` : ""}`
+                        : " · NAICS flagged unknown (not invented)"
+                      : " · no NAICS"}
+                  </p>
+                </CardContent>
+              </Card>
             </li>
           ))}
         </ul>
@@ -192,26 +211,24 @@ export function IcpReviewScreen({
         <h2 className="font-serif text-xl tracking-tight">Company size</h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           {structured.companySize.headcountTiers.map((tier) => (
-            <div
-              key={tier.label}
-              className="rounded-lg border border-[var(--rule)] bg-[var(--card)] p-4"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <p>Headcount {tier.label}</p>
-                <ConfidenceBadge value={tier.confidence} />
-              </div>
-            </div>
+            <Card key={tier.label}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <p>Headcount {tier.label}</p>
+                  <ConfidenceBadge value={tier.confidence} />
+                </div>
+              </CardContent>
+            </Card>
           ))}
           {structured.companySize.revenueBands.map((band) => (
-            <div
-              key={band.label}
-              className="rounded-lg border border-[var(--rule)] bg-[var(--card)] p-4"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <p>Revenue {band.label}</p>
-                <ConfidenceBadge value={band.confidence} />
-              </div>
-            </div>
+            <Card key={band.label}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <p>Revenue {band.label}</p>
+                  <ConfidenceBadge value={band.confidence} />
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </section>
@@ -220,17 +237,18 @@ export function IcpReviewScreen({
         <h2 className="font-serif text-xl tracking-tight">Buyer personas</h2>
         <ul className="mt-3 grid gap-3 sm:grid-cols-2">
           {structured.buyerPersonas.map((persona) => (
-            <li
-              key={`${persona.title}-${persona.seniority}`}
-              className="rounded-lg border border-[var(--rule)] bg-[var(--card)] p-4"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <p className="font-medium">{persona.title}</p>
-                <ConfidenceBadge value={persona.confidence} />
-              </div>
-              <p className="mt-1 text-sm text-[var(--muted)]">
-                {persona.functionalArea} · {persona.seniority}
-              </p>
+            <li key={`${persona.title}-${persona.seniority}`}>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium">{persona.title}</p>
+                    <ConfidenceBadge value={persona.confidence} />
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {persona.functionalArea} · {persona.seniority}
+                  </p>
+                </CardContent>
+              </Card>
             </li>
           ))}
         </ul>
@@ -240,17 +258,18 @@ export function IcpReviewScreen({
         <h2 className="font-serif text-xl tracking-tight">Trigger events</h2>
         <ul className="mt-3 space-y-2">
           {structured.triggerEvents.map((event) => (
-            <li
-              key={event.summary}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--rule)] bg-[var(--card)] p-4"
-            >
-              <p>
-                <span className="text-xs tracking-wide text-[var(--muted)] uppercase">
-                  {event.type}
-                </span>
-                <span className="mt-1 block">{event.summary}</span>
-              </p>
-              <ConfidenceBadge value={event.confidence} />
+            <li key={event.summary}>
+              <Card>
+                <CardContent className="flex flex-wrap items-center justify-between gap-2 p-4">
+                  <p>
+                    <span className="text-xs tracking-wide text-muted-foreground uppercase">
+                      {event.type}
+                    </span>
+                    <span className="mt-1 block">{event.summary}</span>
+                  </p>
+                  <ConfidenceBadge value={event.confidence} />
+                </CardContent>
+              </Card>
             </li>
           ))}
         </ul>
@@ -260,101 +279,104 @@ export function IcpReviewScreen({
         <h2 className="font-serif text-xl tracking-tight">Expansion suggestions</h2>
         <ul className="mt-3 space-y-3">
           {structured.expansionSuggestions.map((item) => (
-            <li
-              key={item.id}
-              className="rounded-lg border border-[var(--rule)] bg-[var(--card)] p-4"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-medium">{item.title}</p>
-                <ConfidenceBadge value={item.confidence} />
-              </div>
-              <p className="mt-1 text-xs tracking-wide text-[var(--muted)] uppercase">
-                {item.kind} · {item.decision}
-              </p>
-              <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-                {item.reasoning}
-              </p>
-              <ul className="mt-2 list-disc pl-5 text-xs text-[var(--muted)]">
-                {item.evidence.map((evidence) => (
-                  <li key={evidence}>{evidence}</li>
-                ))}
-              </ul>
-              {onDecide && item.decision === "PENDING" ? (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() =>
-                      run(() =>
-                        onDecide({
-                          icpId: icp.id,
-                          suggestionId: item.id,
-                          decision: "ACCEPTED",
-                        }),
-                      )
-                    }
-                    className="rounded-md border border-[var(--rule)] px-3 py-1 text-xs"
-                  >
-                    Accept
-                  </button>
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() => {
-                      setAdjusting(item.id);
-                      setAdjustNote("");
-                    }}
-                    className="rounded-md border border-[var(--rule)] px-3 py-1 text-xs"
-                  >
-                    Adjust
-                  </button>
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() =>
-                      run(() =>
-                        onDecide({
-                          icpId: icp.id,
-                          suggestionId: item.id,
-                          decision: "DISMISSED",
-                        }),
-                      )
-                    }
-                    className="rounded-md border border-[var(--rule)] px-3 py-1 text-xs"
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              ) : null}
-              {adjusting === item.id ? (
-                <div className="mt-3 space-y-2">
-                  <textarea
-                    value={adjustNote}
-                    onChange={(event) => setAdjustNote(event.target.value)}
-                    className="w-full rounded-md border border-[var(--rule)] bg-[var(--background)] px-3 py-2 text-sm"
-                    placeholder="Adjustment note"
-                  />
-                  <button
-                    type="button"
-                    disabled={pending || !adjustNote.trim()}
-                    onClick={() =>
-                      run(async () => {
-                        const result = await onDecide?.({
-                          icpId: icp.id,
-                          suggestionId: item.id,
-                          decision: "ADJUSTED",
-                          note: adjustNote.trim(),
-                        });
-                        setAdjusting(null);
-                        return result ?? {};
-                      })
-                    }
-                    className="rounded-md bg-[var(--foreground)] px-3 py-1 text-xs text-[var(--background)]"
-                  >
-                    Save adjustment
-                  </button>
-                </div>
-              ) : null}
+            <li key={item.id}>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-medium">{item.title}</p>
+                    <ConfidenceBadge value={item.confidence} />
+                  </div>
+                  <p className="mt-1 text-xs tracking-wide text-muted-foreground uppercase">
+                    {item.kind} · {item.decision}
+                  </p>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    {item.reasoning}
+                  </p>
+                  <ul className="mt-2 list-disc pl-5 text-xs text-muted-foreground">
+                    {item.evidence.map((evidence) => (
+                      <li key={evidence}>{evidence}</li>
+                    ))}
+                  </ul>
+                  {onDecide && item.decision === "PENDING" ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={pending}
+                        onClick={() =>
+                          run(() =>
+                            onDecide({
+                              icpId: icp.id,
+                              suggestionId: item.id,
+                              decision: "ACCEPTED",
+                            }),
+                          )
+                        }
+                      >
+                        Accept
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={pending}
+                        onClick={() => {
+                          setAdjusting(item.id);
+                          setAdjustNote("");
+                        }}
+                      >
+                        Adjust
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={pending}
+                        onClick={() =>
+                          run(() =>
+                            onDecide({
+                              icpId: icp.id,
+                              suggestionId: item.id,
+                              decision: "DISMISSED",
+                            }),
+                          )
+                        }
+                      >
+                        Dismiss
+                      </Button>
+                    </div>
+                  ) : null}
+                  {adjusting === item.id ? (
+                    <div className="mt-3 space-y-2">
+                      <Textarea
+                        value={adjustNote}
+                        onChange={(event) => setAdjustNote(event.target.value)}
+                        placeholder="Adjustment note"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={pending || !adjustNote.trim()}
+                        onClick={() =>
+                          run(async () => {
+                            const result = await onDecide?.({
+                              icpId: icp.id,
+                              suggestionId: item.id,
+                              decision: "ADJUSTED",
+                              note: adjustNote.trim(),
+                            });
+                            setAdjusting(null);
+                            return result ?? {};
+                          })
+                        }
+                      >
+                        Save adjustment
+                      </Button>
+                    </div>
+                  ) : null}
+                </CardContent>
+              </Card>
             </li>
           ))}
         </ul>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 /** Stable entry so later /prospects rows can link here with a company id. */
 export function draftOutreachHref(companyId: string): string {
@@ -13,11 +14,8 @@ export function DraftOutreachButton({
   label?: string;
 }) {
   return (
-    <Link
-      href={draftOutreachHref(companyId)}
-      className="inline-flex rounded-md bg-[var(--foreground)] px-4 py-2 text-sm text-[var(--background)]"
-    >
-      {label}
-    </Link>
+    <Button asChild size="sm">
+      <Link href={draftOutreachHref(companyId)}>{label}</Link>
+    </Button>
   );
 }

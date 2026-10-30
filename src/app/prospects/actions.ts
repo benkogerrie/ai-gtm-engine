@@ -9,6 +9,7 @@ import {
   getDiscoveryPageAuth,
   runDiscovery,
 } from "@/lib/discovery";
+import { demoActionRateLimit } from "@/lib/demo-rate-limit";
 import { loadIcpForOrg } from "@/lib/icp/service";
 
 function csv(value: FormDataEntryValue | null): string[] | undefined {
@@ -41,6 +42,15 @@ export async function startDiscoveryAction(formData: FormData) {
     redirect("/prospects?error=invalid");
   }
 
+  const limited = await demoActionRateLimit("discovery");
+  if (limited) {
+    const next = new URLSearchParams({ error: "rate" });
+    if (parsed.data.icpId) {
+      next.set("icp", parsed.data.icpId);
+    }
+    redirect(`/prospects?${next.toString()}`);
+  }
+
   const db = await getDb();
   const run = await runDiscovery(parsed.data, {
     db,
@@ -68,6 +78,11 @@ export async function startDiscoveryFromIcpAction(icpId: string) {
   }
   if (loaded.icp.status !== "APPROVED") {
     redirect(`/icp/${icpId}`);
+  }
+
+  const limited = await demoActionRateLimit("discovery");
+  if (limited) {
+    redirect(`/prospects?icp=${loaded.icp.id}&error=rate`);
   }
 
   const input = discoveryInputFromIcp({

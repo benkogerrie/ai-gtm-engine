@@ -51,8 +51,9 @@ flowchart TB
   repo --> audit["append-only audit_events"]
 ```
 
-- **Pages** (`/intake`, `/icp`, `/prospects`, `/outreach`, `/dashboard`): `src/proxy.ts` redirects unauthenticated browsers to `/login?next=…`. The `next` target is allowlisted in `src/lib/login-redirect.ts`. After login the cookie is signed with `APP_API_TOKEN` and does not carry `orgId`.
-- **Data APIs**: `getAuthContext` accepts the bearer token **or** the session cookie. Missing/invalid auth → **401**. Invalid bodies → **400**. Domain-rule violations → **400** with `{ code }`.
+- **Pages** (`/intake`, `/icp`, `/prospects`, `/outreach`, `/dashboard`, `/pipeline`): `src/proxy.ts` redirects unauthenticated browsers to `/login?next=…`. The `next` target is allowlisted in `src/lib/login-redirect.ts`. After login the cookie is signed with `APP_API_TOKEN` and does not carry `orgId`.
+- **Public demo**: `PUBLIC_DEMO_MODE=true` (or unset on Vercel Preview) skips the token/cookie gate. `getPageAuth` / `getAuthContext` / `proxy` map to the server `APP_ORG_ID` and a human demo actor. `/login` redirects to `/intake` (or `next`). `PUBLIC_DEMO_MODE=false` restores token auth. Expensive demo actions are rate-limited in `src/lib/demo-rate-limit.ts`.
+- **Data APIs**: `getAuthContext` accepts the bearer token **or** the session cookie (or demo mapping). Missing/invalid auth → **401**. Invalid bodies → **400**. Domain-rule violations → **400** with `{ code }`. Demo rate-limit exceeded → **429**.
 - **Public**: `GET /api/health`, `GET /api/llm/health`, `GET /api/search/health` (health routes read env only and never return keys).
 
 ## Repository layout
@@ -72,6 +73,7 @@ src/
     discovery/    Brave queries → cited prospects
     outreach/     citation-grounded drafts + HITL
     pipeline/     dashboard snapshot + stage derivation
+    site-intake/  website reader for /intake autofill (SSRF-safe fetch + DeepSeek)
 drizzle/          committed SQL migrations (0000–0002)
 docs/             this file and slice docs
 ```
@@ -121,6 +123,7 @@ Details: [llm.md](./llm.md), [search.md](./search.md).
 | B001 | `/`, `/api/health` | Standalone repo, CI, hello-world |
 | B002 | `/api/products`, `/api/companies/:id`, `/api/citations`, `/api/audit` | Domain model, evidence ledger, HITL outreach states |
 | B003 | `/login`, `/intake`, `/icp/[id]` | Product intake → DeepSeek ICP → human approve |
+| B015 | `/intake`, `POST /api/intake/site` | Read a public website and prefill intake fields |
 | B003a | `src/lib/llm` | DeepSeek provider |
 | B003b | `src/lib/login-redirect.ts` | Post-login `next` allowlist |
 | B004 | `/prospects`, `/api/discovery/runs` | Live Brave discovery, named orgs only, cited claims |
@@ -133,6 +136,8 @@ Not built on `main` yet: scoring/tiers as a standalone engine (B005), graph stor
 ### Intake and ICP
 
 `submitProductIntake` → `LlmClient.json` → shape-normalize → Zod. One repair retry. Invalid JSON is rejected. Fields stay `INFERRED` until a human clicks **Approve ICP**. Edits after approval create a new DRAFT version (`parentIcpId`). NAICS codes are checked against a committed 2022 list; unknown codes are flagged, not replaced. [icp-engine.md](./icp-engine.md).
+
+Optional **Read my site** on `/intake` calls `POST /api/intake/site`. The reader upgrades `http` → `https`, allows only public hosts (localhost, private, link-local, and reserved IPv4/IPv6 are blocked after DNS), follows at most 3 redirects with the same checks on each hop, fetches at most 3 same-origin pages (8s / 1.5 MB each), strips scripts and styles to text, and sends a capped excerpt to DeepSeek (`LlmClient.json`, nullable Zod fields, one repair). Missing `DEEPSEEK_API_KEY` uses `createMockLlmClient` and is labeled **MOCK**. Prefill never invents facts; empty fields stay empty and are marked *Nog invullen / Needs input* until the user types. The product schema has no website column, so the URL is stored as `Website: <url>` in free text.
 
 ### Discovery
 
@@ -170,6 +175,7 @@ Automatic board stages come **only** from recorded rows. `REJECTED` is a **separ
 | GET | `/api/companies/[id]` | required | Company + field evidence for the server org |
 | POST | `/api/citations` | required | |
 | GET | `/api/audit` | required | |
+| POST | `/api/intake/site` | required | Public https site reader; `maxDuration` 60s |
 | POST | `/api/discovery/runs` | required | `maxDuration` 60s |
 | GET | `/api/discovery/runs/[id]` | required | |
 | GET/POST | `/api/outreach` | required | |

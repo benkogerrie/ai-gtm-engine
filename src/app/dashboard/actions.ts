@@ -9,7 +9,7 @@ import { getPageAuth } from "@/lib/session";
 
 export type DashboardActionState = { error?: string };
 
-async function requireAuth(next = "/dashboard") {
+async function requireAuth(next = "/pipeline") {
   const auth = await getPageAuth();
   if (!auth) {
     redirect(`/login?next=${encodeURIComponent(next)}`);
@@ -31,8 +31,8 @@ export async function moveDashboardCardAction(
     nextParams.set("run", runId);
   }
   const next = nextParams.size
-    ? `/dashboard?${nextParams.toString()}`
-    : "/dashboard";
+    ? `/pipeline?${nextParams.toString()}`
+    : "/pipeline";
   const auth = await requireAuth(next);
   const companyId = String(formData.get("companyId") ?? "").trim();
   const stageRaw = String(formData.get("stage") ?? "").trim();
@@ -66,6 +66,7 @@ export async function moveDashboardCardAction(
       auth,
     );
     revalidatePath("/dashboard");
+    revalidatePath("/pipeline");
     return {};
   } catch (error) {
     if (error && typeof error === "object" && "digest" in error) {

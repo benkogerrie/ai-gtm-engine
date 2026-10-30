@@ -6,6 +6,7 @@ import { isDomainError } from "@/domain";
 import { isLlmError } from "@/lib/llm";
 import { createIcpLlmClient } from "@/lib/icp/infer";
 import { submitProductIntake } from "@/lib/icp/service";
+import { demoActionRateLimit } from "@/lib/demo-rate-limit";
 import { getPageAuth } from "@/lib/session";
 
 export type IntakeState = { error?: string };
@@ -33,6 +34,11 @@ export async function submitIntakeAction(
   const auth = await getPageAuth();
   if (!auth) {
     redirect("/login");
+  }
+
+  const limited = await demoActionRateLimit("intake");
+  if (limited) {
+    return limited;
   }
 
   try {

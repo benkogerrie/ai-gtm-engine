@@ -2,6 +2,39 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { logoutAction } from "@/app/actions/auth";
 import { AppNav } from "@/components/app-nav";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+export function BrandMark({ className }: { className?: string }) {
+  return (
+    <Link
+      href="/"
+      className={cn("truncate text-lg font-medium", className)}
+    >
+      Seed to <span className="text-primary">Saga</span>
+    </Link>
+  );
+}
+
+export function AppTopBar({
+  trailing,
+}: {
+  trailing?: ReactNode;
+}) {
+  return (
+    <header className="shrink-0 px-4 pt-4 pb-3 sm:px-5">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
+        <BrandMark />
+        <div className="col-span-2 justify-self-start sm:col-span-1 sm:justify-self-center">
+          <AppNav />
+        </div>
+        <div className="flex items-center justify-end gap-3 sm:order-last">
+          {trailing}
+        </div>
+      </div>
+    </header>
+  );
+}
 
 export function AppShell({
   children,
@@ -16,38 +49,31 @@ export function AppShell({
 }) {
   return (
     <div className="flex min-h-full flex-col">
-      <header className="border-b border-[var(--rule)]">
-        <div
-          className={`mx-auto flex w-full items-center justify-between px-6 py-5 ${
-            wide ? "max-w-6xl" : "max-w-5xl"
-          }`}
-        >
-          <Link href="/" className="text-sm font-medium tracking-[0.18em] uppercase">
-            AI GTM Engine
-          </Link>
-          <div className="flex flex-wrap items-center gap-4">
-            {eyebrow ? (
-              <p className="text-xs tracking-wide text-[var(--muted)]">{eyebrow}</p>
-            ) : null}
-            <AppNav />
-            {showLogout ? (
-              <form action={logoutAction}>
-                <button
-                  type="submit"
-                  className="text-xs tracking-wide text-[var(--muted)] uppercase hover:text-[var(--foreground)]"
-                >
-                  Log out
-                </button>
-              </form>
-            ) : null}
-          </div>
-        </div>
-      </header>
+      <AppTopBar
+        trailing={
+          showLogout ? (
+            <form action={logoutAction}>
+              <Button
+                type="submit"
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground"
+              >
+                Log out
+              </Button>
+            </form>
+          ) : null
+        }
+      />
       <main
-        className={`mx-auto flex w-full flex-1 flex-col px-6 py-10 ${
-          wide ? "max-w-6xl" : "max-w-5xl"
-        }`}
+        className={cn(
+          "mx-auto flex w-full flex-1 flex-col px-4 py-8 sm:px-5",
+          wide ? "max-w-6xl" : "max-w-5xl",
+        )}
       >
+        {eyebrow ? (
+          <p className="mb-3 text-xs text-muted-foreground">{eyebrow}</p>
+        ) : null}
         {children}
       </main>
     </div>

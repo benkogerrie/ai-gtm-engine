@@ -5,6 +5,9 @@ import {
   draftOutreachAction,
   type OutreachActionState,
 } from "@/app/actions/outreach";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import { OUTREACH_CTAS, OUTREACH_TONES } from "@/lib/outreach";
 
 export function DraftOutreachForm({
@@ -27,26 +30,26 @@ export function DraftOutreachForm({
   return (
     <form action={action} className="mt-6 space-y-4">
       <input type="hidden" name="companyId" value={companyId} />
-      <p className="text-sm text-[var(--muted)]">
+      <p className="text-sm text-muted-foreground">
         Company id <span className="font-mono">{companyId}</span> · {companyName}
       </p>
       {!canDraft ? (
-        <p className="text-sm text-red-800" role="alert">
+        <p className="text-sm text-destructive" role="alert">
           {refuseMessage ??
             "This company has no cited signal. Attach a citation before drafting."}
         </p>
       ) : (
-        <p className="text-sm text-[var(--muted)]">
+        <p className="text-sm text-muted-foreground">
           {citedCount} cited signal{citedCount === 1 ? "" : "s"} available.
         </p>
       )}
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm">
-          <span className="text-[var(--muted)]">Tone</span>
+        <Label>
+          <span className="text-muted-foreground">Tone</span>
           <select
             name="tone"
             defaultValue="professional"
-            className="mt-1 w-full rounded-md border border-[var(--rule)] bg-[var(--card)] px-3 py-2"
+            className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {OUTREACH_TONES.map((tone) => (
               <option key={tone} value={tone}>
@@ -54,13 +57,13 @@ export function DraftOutreachForm({
               </option>
             ))}
           </select>
-        </label>
-        <label className="block text-sm">
-          <span className="text-[var(--muted)]">CTA</span>
+        </Label>
+        <Label>
+          <span className="text-muted-foreground">CTA</span>
           <select
             name="cta"
             defaultValue="book a call"
-            className="mt-1 w-full rounded-md border border-[var(--rule)] bg-[var(--card)] px-3 py-2"
+            className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {OUTREACH_CTAS.map((cta) => (
               <option key={cta} value={cta}>
@@ -68,20 +71,23 @@ export function DraftOutreachForm({
               </option>
             ))}
           </select>
-        </label>
+        </Label>
       </div>
       {state.error ? (
-        <p className="text-sm text-red-800" role="alert">
+        <p className="text-sm text-destructive" role="alert">
           {state.error}
         </p>
       ) : null}
-      <button
-        type="submit"
-        disabled={pending || !canDraft}
-        className="rounded-md bg-[var(--foreground)] px-4 py-2 text-sm text-[var(--background)] disabled:opacity-50"
-      >
-        {pending ? "Drafting…" : "Draft outreach"}
-      </button>
+      <Button type="submit" disabled={pending || !canDraft}>
+        {pending ? (
+          <>
+            <Spinner />
+            Drafting…
+          </>
+        ) : (
+          "Draft outreach"
+        )}
+      </Button>
     </form>
   );
 }

@@ -26,6 +26,22 @@ describe("proxy auth gate", () => {
     expect(location).toContain("next=%2Fdashboard");
   });
 
+  it("redirects unauthenticated /pipeline to /login", () => {
+    installTestAuth();
+    const response = proxy(new NextRequest("http://localhost/pipeline"));
+    const location = response.headers.get("location") ?? "";
+    expect(location).toContain("/login");
+    expect(location).toContain("next=%2Fpipeline");
+  });
+
+  it("allows app pages without a cookie in public demo mode", () => {
+    process.env.PUBLIC_DEMO_MODE = "true";
+    process.env.APP_ORG_ID = "11111111-1111-4111-8111-111111111111";
+    const response = proxy(new NextRequest("http://localhost/intake"));
+    expect(response.status).toBeLessThan(300);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
   it("redirects unauthenticated /outreach/[id] to /login", () => {
     installTestAuth();
     const response = proxy(

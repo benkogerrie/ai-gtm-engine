@@ -4,6 +4,7 @@ import {
   readConfiguredSecret,
   verifySessionValue,
 } from "@/lib/auth";
+import { isPublicDemoMode } from "@/lib/demo-mode";
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -17,8 +18,10 @@ export function proxy(request: NextRequest) {
     pathname === "/outreach" ||
     pathname.startsWith("/outreach/") ||
     pathname === "/dashboard" ||
-    pathname.startsWith("/dashboard/");
-  if (!needsAuth) {
+    pathname.startsWith("/dashboard/") ||
+    pathname === "/pipeline" ||
+    pathname.startsWith("/pipeline/");
+  if (!needsAuth || isPublicDemoMode()) {
     return NextResponse.next();
   }
 
@@ -45,5 +48,7 @@ export const config = {
     "/outreach/:path*",
     "/dashboard",
     "/dashboard/:path*",
+    "/pipeline",
+    "/pipeline/:path*",
   ],
 };

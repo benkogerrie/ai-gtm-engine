@@ -25,7 +25,7 @@ async function NewOutreachBody({ companyId }: { companyId: string | undefined })
     return (
       <AppShell eyebrow="B008 · Draft outreach" showLogout>
         <h1 className="font-serif text-4xl tracking-tight">Draft outreach</h1>
-        <p className="mt-3 max-w-2xl text-[var(--muted)]">
+        <p className="mt-3 max-w-2xl text-muted-foreground">
           This entry point takes a company id so /prospects can link here later
           (`/outreach/new?companyId=`). Seed the TEST hospital on{" "}
           <Link href="/outreach" className="underline">
@@ -48,11 +48,11 @@ async function NewOutreachBody({ companyId }: { companyId: string | undefined })
   return (
     <AppShell eyebrow="B008 · Draft outreach" showLogout>
       <h1 className="font-serif text-4xl tracking-tight">Draft outreach</h1>
-      <p className="mt-3 max-w-2xl text-[var(--muted)]">
+      <p className="mt-3 max-w-2xl text-muted-foreground">
         {SELLER_PRODUCT.name} ({SELLER_PRODUCT.description}) → {collected.companyName}.
         Drafts stay gated: approve / edit / reject, then dry-run only.
       </p>
-      <p className="mt-2 flex flex-wrap gap-4 text-sm text-[var(--muted)]">
+      <p className="mt-2 flex flex-wrap gap-4 text-sm text-muted-foreground">
         <Link href="/prospects" className="underline">
           Back to prospects
         </Link>
@@ -76,7 +76,7 @@ export default async function NewOutreachPage({
 }) {
   const params = await searchParams;
   return (
-    <Suspense fallback={<p className="p-6 text-sm text-[var(--muted)]">Loading…</p>}>
+    <Suspense fallback={<p className="p-6 text-sm text-muted-foreground">Loading…</p>}>
       <NewOutreachBody companyId={params.companyId} />
     </Suspense>
   );

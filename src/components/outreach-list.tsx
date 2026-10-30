@@ -8,6 +8,11 @@ import {
   type OutreachActionState,
 } from "@/app/actions/outreach";
 import { DraftOutreachButton } from "@/components/draft-outreach-button";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import { OUTREACH_CTAS, OUTREACH_TONES, SELLER_PRODUCT } from "@/lib/outreach";
 
 export type OutreachListRow = {
@@ -27,12 +32,11 @@ export type OutreachCompanyOption = {
 };
 
 function StatusBadge({ status }: { status: string }) {
-  return (
-    <span className="rounded-full border border-[var(--rule)] px-2 py-0.5 text-[10px] tracking-[0.14em] uppercase">
-      {status.replaceAll("_", " ")}
-    </span>
-  );
+  return <Badge variant="outline">{status.replaceAll("_", " ")}</Badge>;
 }
+
+const selectClass =
+  "mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export function OutreachList({
   rows,
@@ -56,7 +60,7 @@ export function OutreachList({
     <div className="space-y-10">
       <div>
         <h1 className="font-serif text-4xl tracking-tight">Outreach</h1>
-        <p className="mt-3 max-w-2xl text-[var(--muted)]">
+        <p className="mt-3 max-w-2xl text-muted-foreground">
           {SELLER_PRODUCT.name} ({SELLER_PRODUCT.description}) drafts from cited
           hospital signals only. A human must approve / edit / reject before
           Send (dry run). There is no real send path. /prospects can link to{" "}
@@ -64,131 +68,139 @@ export function OutreachList({
         </p>
       </div>
 
-      <section className="rounded-lg border border-[var(--rule)] bg-[var(--card)] p-5">
-        <h2 className="font-serif text-xl tracking-tight">Draft outreach</h2>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          Takes a company id. Refuses if that company has no cited signal.
-        </p>
-        <form action={draftAction} className="mt-4 grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm sm:col-span-2">
-            <span className="text-[var(--muted)]">Company</span>
-            <select
-              name="companyId"
-              required
-              className="mt-1 w-full rounded-md border border-[var(--rule)] bg-[var(--card)] px-3 py-2"
-              defaultValue={selectedCompanyId ?? ""}
+      <Card>
+        <CardHeader>
+          <CardTitle>Draft outreach</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Takes a company id. Refuses if that company has no cited signal.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <form action={draftAction} className="grid gap-4 sm:grid-cols-2">
+            <Label className="sm:col-span-2">
+              <span className="text-muted-foreground">Company</span>
+              <select
+                name="companyId"
+                required
+                className={selectClass}
+                defaultValue={selectedCompanyId ?? ""}
+              >
+                <option value="" disabled>
+                  Select a company
+                </option>
+                {companies.map((company) => (
+                  <option key={company.id} value={company.id}>
+                    {company.name}
+                    {company.domain ? ` · ${company.domain}` : ""}
+                  </option>
+                ))}
+              </select>
+            </Label>
+            <Label>
+              <span className="text-muted-foreground">Tone</span>
+              <select name="tone" defaultValue="professional" className={selectClass}>
+                {OUTREACH_TONES.map((tone) => (
+                  <option key={tone} value={tone}>
+                    {tone}
+                  </option>
+                ))}
+              </select>
+            </Label>
+            <Label>
+              <span className="text-muted-foreground">CTA</span>
+              <select name="cta" defaultValue="book a call" className={selectClass}>
+                {OUTREACH_CTAS.map((cta) => (
+                  <option key={cta} value={cta}>
+                    {cta}
+                  </option>
+                ))}
+              </select>
+            </Label>
+            {draftState.error ? (
+              <p className="text-sm text-destructive sm:col-span-2" role="alert">
+                {draftState.error}
+              </p>
+            ) : null}
+            <Button
+              type="submit"
+              className="w-fit"
+              disabled={draftPending || companies.length === 0}
             >
-              <option value="" disabled>
-                Select a company
-              </option>
+              {draftPending ? (
+                <>
+                  <Spinner />
+                  Drafting…
+                </>
+              ) : (
+                "Draft outreach"
+              )}
+            </Button>
+          </form>
+          {companies.length > 0 ? (
+            <ul className="mt-4 space-y-2">
               {companies.map((company) => (
-                <option key={company.id} value={company.id}>
-                  {company.name}
-                  {company.domain ? ` · ${company.domain}` : ""}
-                </option>
+                <li
+                  key={company.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-md border px-3 py-2"
+                >
+                  <span className="text-sm">
+                    {company.name}
+                    {company.domain ? (
+                      <span className="text-muted-foreground"> · {company.domain}</span>
+                    ) : null}
+                  </span>
+                  <DraftOutreachButton companyId={company.id} />
+                </li>
               ))}
-            </select>
-          </label>
-          <label className="block text-sm">
-            <span className="text-[var(--muted)]">Tone</span>
-            <select
-              name="tone"
-              defaultValue="professional"
-              className="mt-1 w-full rounded-md border border-[var(--rule)] bg-[var(--card)] px-3 py-2"
-            >
-              {OUTREACH_TONES.map((tone) => (
-                <option key={tone} value={tone}>
-                  {tone}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-sm">
-            <span className="text-[var(--muted)]">CTA</span>
-            <select
-              name="cta"
-              defaultValue="book a call"
-              className="mt-1 w-full rounded-md border border-[var(--rule)] bg-[var(--card)] px-3 py-2"
-            >
-              {OUTREACH_CTAS.map((cta) => (
-                <option key={cta} value={cta}>
-                  {cta}
-                </option>
-              ))}
-            </select>
-          </label>
-          {draftState.error ? (
-            <p className="text-sm text-red-800 sm:col-span-2" role="alert">
-              {draftState.error}
+            </ul>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card className="border-accent bg-accent">
+        <CardHeader>
+          <CardTitle>Seed TEST company</CardTitle>
+          <p className="text-sm text-accent-foreground">
+            Creates one labeled hospital prospect for {SELLER_PRODUCT.name}: TEST
+            — Example General Hospital / example.com /{" "}
+            <span className="font-mono">https://example.com</span>. Not a real
+            hospital.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <form action={seedAction}>
+            <Button type="submit" variant="outline" disabled={seedPending}>
+              {seedPending ? (
+                <>
+                  <Spinner />
+                  Seeding…
+                </>
+              ) : (
+                "Seed TEST company"
+              )}
+            </Button>
+          </form>
+          {seedState.error ? (
+            <p className="mt-2 text-sm text-destructive" role="alert">
+              {seedState.error}
             </p>
           ) : null}
-          <button
-            type="submit"
-            disabled={draftPending || companies.length === 0}
-            className="rounded-md bg-[var(--foreground)] px-4 py-2 text-sm text-[var(--background)] disabled:opacity-50"
-          >
-            {draftPending ? "Drafting…" : "Draft outreach"}
-          </button>
-        </form>
-        {companies.length > 0 ? (
-          <ul className="mt-4 space-y-2">
-            {companies.map((company) => (
-              <li
-                key={company.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-[var(--rule)] px-3 py-2"
-              >
-                <span className="text-sm">
-                  {company.name}
-                  {company.domain ? (
-                    <span className="text-[var(--muted)]"> · {company.domain}</span>
-                  ) : null}
-                </span>
-                <DraftOutreachButton companyId={company.id} />
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </section>
-
-      <section className="rounded-lg border border-amber-300 bg-amber-50 p-5">
-        <h2 className="font-serif text-xl tracking-tight">
-          Seed TEST company
-        </h2>
-        <p className="mt-1 text-sm">
-          Creates one labeled hospital prospect for {SELLER_PRODUCT.name}: TEST
-          — Example General Hospital / example.com /{" "}
-          <span className="font-mono">https://example.com</span>. Not a real
-          hospital.
-        </p>
-        <form action={seedAction} className="mt-4">
-          <button
-            type="submit"
-            disabled={seedPending}
-            className="rounded-md border border-[var(--rule)] bg-[var(--card)] px-4 py-2 text-sm disabled:opacity-50"
-          >
-            {seedPending ? "Seeding…" : "Seed TEST company"}
-          </button>
-        </form>
-        {seedState.error ? (
-          <p className="mt-2 text-sm text-red-800" role="alert">
-            {seedState.error}
-          </p>
-        ) : null}
-      </section>
+        </CardContent>
+      </Card>
 
       <section>
-        <div className="flex items-end justify-between border-b border-[var(--rule)] pb-3">
+        <div className="flex items-end justify-between border-b pb-3">
           <h2 className="font-serif text-xl tracking-tight">Drafts</h2>
-          <p className="text-xs tracking-wide text-[var(--muted)] uppercase">
+          <p className="text-xs tracking-wide text-muted-foreground uppercase">
             {rows.length} rows
           </p>
         </div>
         {rows.length === 0 ? (
-          <p className="mt-4 text-sm text-[var(--muted)]">
+          <p className="mt-4 text-sm text-muted-foreground">
             No outreach yet. Seed the TEST company, then draft.
           </p>
         ) : (
-          <ul className="mt-4 divide-y divide-[var(--rule)]">
+          <ul className="mt-4 divide-y">
             {rows.map((row) => (
               <li key={row.id} className="flex flex-wrap items-center gap-3 py-3">
                 <Link
@@ -198,12 +210,10 @@ export function OutreachList({
                   {row.companyName ?? "Unknown company"}
                 </Link>
                 {row.labeledTest ? (
-                  <span className="rounded-full border border-amber-300 px-2 py-0.5 text-[10px] tracking-[0.14em] uppercase">
-                    TEST / MOCK
-                  </span>
+                  <Badge variant="inferred">TEST / MOCK</Badge>
                 ) : null}
                 <StatusBadge status={row.status} />
-                <span className="text-xs text-[var(--muted)] tabular-nums">
+                <span className="text-xs text-muted-foreground tabular-nums">
                   {new Date(row.updatedAt).toLocaleString()}
                 </span>
               </li>

@@ -2,6 +2,10 @@
 
 import { useActionState } from "react";
 import { loginAction, type LoginState } from "@/app/actions/auth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 
 const initial: LoginState = {};
 
@@ -17,34 +21,37 @@ export function LoginForm({
   return (
     <form action={action} className="mt-8 max-w-md space-y-4">
       <input type="hidden" name="next" value={next} />
-      <label className="block text-sm">
-        <span className="text-[var(--muted)]">APP_API_TOKEN</span>
-        <input
+      <Label>
+        <span className="text-muted-foreground">APP_API_TOKEN</span>
+        <Input
           name="token"
           type="password"
           autoComplete="off"
           required
           disabled={!configured}
-          className="mt-1 w-full rounded-md border border-[var(--rule)] bg-[var(--card)] px-3 py-2"
+          className="mt-1"
         />
-      </label>
+      </Label>
       {!configured ? (
-        <p className="text-sm text-[var(--muted)]">
+        <p className="text-sm text-muted-foreground">
           Server auth is not configured. Set APP_API_TOKEN and APP_ORG_ID.
         </p>
       ) : null}
       {state.error ? (
-        <p className="text-sm text-red-800" role="alert">
+        <p className="text-sm text-destructive" role="alert">
           {state.error}
         </p>
       ) : null}
-      <button
-        type="submit"
-        disabled={pending || !configured}
-        className="rounded-md bg-[var(--foreground)] px-4 py-2 text-sm text-[var(--background)] disabled:opacity-50"
-      >
-        {pending ? "Signing in…" : "Continue"}
-      </button>
+      <Button type="submit" disabled={pending || !configured}>
+        {pending ? (
+          <>
+            <Spinner />
+            Signing in…
+          </>
+        ) : (
+          "Continue"
+        )}
+      </Button>
     </form>
   );
 }

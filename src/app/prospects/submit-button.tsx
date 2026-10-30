@@ -1,16 +1,29 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 
 export function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="rounded-md border border-[var(--rule)] bg-[var(--foreground)] px-4 py-2 text-sm text-[var(--background)] disabled:opacity-60"
-    >
-      {pending ? "Searching…" : "Find prospects"}
-    </button>
+    <div className="flex flex-col gap-2">
+      <Button type="submit" disabled={pending} aria-busy={pending} className="w-fit">
+        {pending ? (
+          <>
+            <Spinner />
+            Finding prospects…
+          </>
+        ) : (
+          "Find prospects"
+        )}
+      </Button>
+      {pending ? (
+        <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Spinner />
+          Finding prospects… searching public sources. This can take a minute.
+        </p>
+      ) : null}
+    </div>
   );
 }
