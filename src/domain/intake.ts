@@ -73,7 +73,7 @@ export const llmExpansionSuggestionSchema = z.object({
   kind: expansionKindSchema,
   title: z.string().min(1),
   reasoning: z.string().min(1),
-  evidence: z.array(z.string().min(1)).min(1),
+  evidence: z.array(z.string().min(1)).default([]),
   confidence: confidenceSchema,
   status: inferredStatusSchema,
 });

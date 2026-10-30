@@ -20,8 +20,9 @@ Every inferred object carries `confidence` in `0.00–1.00` and `status: "INFERR
 
 ## Inference
 
-- Prompts: `src/lib/icp/prompts/v1.ts` (`ICP_PROMPT_VERSION = "v1"`)
-- Client: DeepSeek when `DEEPSEEK_API_KEY` is set; otherwise the mock client (`allowMockIfUnconfigured` path via `createIcpLlmClient`)
+- Prompts: `src/lib/icp/prompts/v1.ts` (`ICP_PROMPT_VERSION = "v1"`) include a filled JSON example and literal enums
+- Client: DeepSeek when `DEEPSEEK_API_KEY` is set (`response_format: json_object`); otherwise the mock client
+- Model JSON is shape-normalized (`src/lib/icp/normalize.ts`) before Zod validation. One repair retry includes the Zod issues verbatim. Invalid output is still rejected.
 - The UI labels mock results as **MOCK output**
 
 ## NAICS

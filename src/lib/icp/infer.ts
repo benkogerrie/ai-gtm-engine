@@ -1,5 +1,4 @@
 import {
-  llmIcpOutputSchema,
   structuredIcpSchema,
   type LlmIcpOutput,
   type ProductIntake,
@@ -9,6 +8,7 @@ import { newId } from "@/db/ids";
 import { isLlmError, LlmInvalidJsonError, type LlmClient } from "@/lib/llm";
 import { createLlmClient, isLlmConfigured } from "@/lib/llm";
 import { createMockLlmClient } from "@/lib/llm";
+import { llmIcpOutputNormalizedSchema } from "./normalize";
 import { validateNaics } from "./naics";
 import { buildMockIcpOutput } from "./mock-output";
 import { buildIcpUserPrompt, ICP_PROMPT_VERSION, ICP_SYSTEM_PROMPT } from "./prompts/v1";
@@ -152,7 +152,7 @@ export async function inferStructuredIcp(
   ];
 
   try {
-    const result = await client.json(llmIcpOutputSchema, messages);
+    const result = await client.json(llmIcpOutputNormalizedSchema, messages);
     return {
       structured: hydrateStructuredIcp(result.data),
       inferenceMode: client.provider === "mock" ? "mock" : "live",

@@ -9,8 +9,9 @@ import {
   type LlmJsonResult,
 } from "@/lib/llm";
 import { createMockLlmClient } from "@/lib/llm";
-import { buildMockIcpOutput } from "./mock-output";
+import { failingLiveShape } from "./failing-live-shape";
 import { inferStructuredIcp } from "./infer";
+import { buildMockIcpOutput } from "./mock-output";
 
 const intake = {
   name: "Harborline Ops Cloud",
@@ -102,6 +103,15 @@ describe("ICP inference", () => {
     const client = createMockLlmClient({ jsonValue: { name: "x" } });
     await expect(inferStructuredIcp(client, intake)).rejects.toBeInstanceOf(
       LlmInvalidJsonError,
+    );
+  });
+
+  it("accepts the live failing shape after normalization", async () => {
+    const client = createMockLlmClient({ jsonValue: failingLiveShape });
+    const result = await inferStructuredIcp(client, intake);
+    expect(result.structured.targetIndustries[0]?.naics).toBe("488510");
+    expect(result.structured.expansionSuggestions[0]?.kind).toBe(
+      "ADJACENT_SEGMENT",
     );
   });
 });
