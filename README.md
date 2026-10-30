@@ -13,6 +13,7 @@ This repository is a **completely independent** application. It does not share c
 - pnpm
 - Vitest + Testing Library
 - GitHub Actions CI
+- Drizzle ORM + Postgres (PGlite in-process when `DATABASE_URL` is empty)
 
 ## Prerequisites
 
@@ -31,7 +32,13 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000). Health check: [http://localhost:3000/api/health](http://localhost:3000/api/health).
 
-`.env.example` lists empty, commented placeholders for future integrations (LLM provider, Tavily, Serper, Neo4j / Kùzu, Hunter, Apollo, SendGrid, Flexprice). Do not put real secrets in the repository.
+`.env.example` lists empty placeholders. `DATABASE_URL=` is intentionally blank so local/dev/test use in-process [PGlite](https://pglite.dev) (no Docker, no secrets). Set `DATABASE_URL` later for a real Postgres (for example on Vercel). Optional `PGLITE_DATA_DIR` overrides the default `.pglite/` data directory used by `pnpm db:migrate`.
+
+Data APIs (`/api/products`, `/api/companies/*`, `/api/citations`, `/api/audit`) require `Authorization: Bearer $APP_API_TOKEN`. Org and actor are mapped server-side from `APP_ORG_ID` / `APP_ACTOR_ID` / `APP_ACTOR_TYPE` — never from the request. Leave those placeholders empty in the repo. `/api/health` stays public.
+
+Do not put real secrets in the repository.
+
+Domain model, evidence ledger, and verification rules: [docs/domain-model.md](./docs/domain-model.md).
 
 ## Scripts
 
@@ -43,6 +50,9 @@ Open [http://localhost:3000](http://localhost:3000). Health check: [http://local
 | `lint` | `pnpm lint` | ESLint |
 | `typecheck` | `pnpm typecheck` | `tsc --noEmit` |
 | `test` | `pnpm test` | Vitest (single run) |
+| `db:generate` | `pnpm db:generate` | Create a Drizzle SQL migration from `src/db/schema.ts` |
+| `db:migrate` | `pnpm db:migrate` | Apply committed migrations (PGlite if `DATABASE_URL` is empty) |
+| `db:seed` | `pnpm db:seed` | Insert clearly labeled EXAMPLE data only |
 
 ## CI
 
@@ -58,7 +68,7 @@ Open [http://localhost:3000](http://localhost:3000). Health check: [http://local
 
 Preview deployments are created automatically by [Vercel](https://vercel.com)’s GitHub integration for every pull-request branch. Opening or updating a PR is enough; do not run `vercel` CLI deploy commands from this repository.
 
-There is **no production deploy** until a merge to `main` is approved. The hello-world app needs no environment variables on Vercel.
+There is **no production deploy** until a merge to `main` is approved. Preview functions without `DATABASE_URL` boot an empty in-memory PGlite database (non-persistent). Do not configure Vercel secrets from this repository.
 
 ## Roadmap
 
