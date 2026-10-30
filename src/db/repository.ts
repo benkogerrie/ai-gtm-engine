@@ -227,6 +227,70 @@ export async function getIcp(db: AppDatabase, id: string) {
   return row ?? null;
 }
 
+export async function getIcpForOrg(db: AppDatabase, id: string, orgId: string) {
+  const [row] = await db
+    .select()
+    .from(icps)
+    .where(and(eq(icps.id, id), eq(icps.orgId, orgId)));
+  return row ?? null;
+}
+
+export async function getOrganization(db: AppDatabase, id: string) {
+  const [row] = await db
+    .select()
+    .from(organizations)
+    .where(eq(organizations.id, id));
+  return row ?? null;
+}
+
+export async function ensureOrganization(
+  db: AppDatabase,
+  input: { id: string; name: string },
+  actor: MutationActor,
+) {
+  const existing = await getOrganization(db, input.id);
+  if (existing) {
+    return existing;
+  }
+  return createOrganization(db, input, actor);
+}
+
+export async function updateIcp(
+  db: AppDatabase,
+  id: string,
+  orgId: string,
+  patch: Record<string, unknown>,
+  actor: MutationActor,
+  action = "icp.update",
+) {
+  const current = await getIcpForOrg(db, id, orgId);
+  if (!current) {
+    throw new DomainError("ICP_NOT_FOUND", `ICP ${id} was not found for this org`);
+  }
+  const stamped = now();
+  const next = { ...patch, updatedAt: stamped };
+  return withAudit(
+    db,
+    {
+      orgId: current.orgId,
+      actor,
+      action,
+      entityType: "icp",
+      entityId: current.id,
+      before: current,
+      after: { ...current, ...next },
+    },
+    async (tx) => {
+      const [updated] = await tx
+        .update(icps)
+        .set(next)
+        .where(eq(icps.id, current.id))
+        .returning();
+      return updated;
+    },
+  );
+}
+
 export async function createCompany(
   db: AppDatabase,
   raw: CreateCompanyInput,

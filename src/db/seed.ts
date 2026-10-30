@@ -73,6 +73,10 @@ export async function seedExampleData() {
       triggerEvents: ["new TMS rollout", "brokerage expansion hire"],
       confidenceScores: { targetIndustries: 0.72, buyerPersonas: 0.64 },
       expansionSuggestions: ["3PL control towers"],
+      version: 1,
+      inferenceMode: "mock",
+      approvedBy: "example-rep",
+      approvedAt: new Date("2026-10-15T12:00:00.000Z"),
     },
     actor,
   );

@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@electric-sql/pglite", "drizzle-orm", "pg"],
   outputFileTracingIncludes: {
     "/api/**": ["./drizzle/**/*"],
+    "/intake": ["./drizzle/**/*"],
+    "/icp/[id]": ["./drizzle/**/*"],
+    "/login": ["./drizzle/**/*"],
   },
   turbopack: {
     rules: {
