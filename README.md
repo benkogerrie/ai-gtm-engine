@@ -36,9 +36,9 @@ Open [http://localhost:3000](http://localhost:3000). Health check: [http://local
 
 Data APIs (`/api/products`, `/api/companies/*`, `/api/citations`, `/api/audit`) require `Authorization: Bearer $APP_API_TOKEN`. Org and actor are mapped server-side from `APP_ORG_ID` / `APP_ACTOR_ID` / `APP_ACTOR_TYPE` — never from the request. Leave those placeholders empty in the repo. `/api/health` stays public.
 
-Do not put real secrets in the repository.
+LLM usage (DeepSeek) is documented in [`docs/llm.md`](./docs/llm.md). Domain model, evidence ledger, and verification rules: [docs/domain-model.md](./docs/domain-model.md).
 
-Domain model, evidence ledger, and verification rules: [docs/domain-model.md](./docs/domain-model.md).
+Do not put real secrets in the repository.
 
 ## Scripts
 
@@ -49,7 +49,8 @@ Domain model, evidence ledger, and verification rules: [docs/domain-model.md](./
 | `start` | `pnpm start` | Serve the production build |
 | `lint` | `pnpm lint` | ESLint |
 | `typecheck` | `pnpm typecheck` | `tsc --noEmit` |
-| `test` | `pnpm test` | Vitest (single run) |
+| `test` | `pnpm test` | Vitest (single run; excludes live smoke) |
+| `test:live` | `pnpm test:live` | Optional DeepSeek smoke; skips if `DEEPSEEK_API_KEY` is unset |
 | `db:generate` | `pnpm db:generate` | Create a Drizzle SQL migration from `src/db/schema.ts` |
 | `db:migrate` | `pnpm db:migrate` | Apply committed migrations (PGlite if `DATABASE_URL` is empty) |
 | `db:seed` | `pnpm db:seed` | Insert clearly labeled EXAMPLE data only |
