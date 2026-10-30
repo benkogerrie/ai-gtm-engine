@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { PRODUCT_MODULES } from "@/lib/modules";
 
 export function HomePage() {
@@ -8,7 +9,12 @@ export function HomePage() {
           <p className="text-sm font-medium tracking-[0.18em] uppercase">
             AI GTM Engine
           </p>
-          <p className="text-xs tracking-wide text-[var(--muted)]">B001 · Public skeleton</p>
+          <Link
+            href="/intake"
+            className="text-xs tracking-wide text-[var(--muted)] uppercase hover:text-[var(--foreground)]"
+          >
+            Product intake
+          </Link>
         </div>
       </header>
 

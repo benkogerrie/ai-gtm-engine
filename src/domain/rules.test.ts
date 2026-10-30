@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DomainError } from "./errors";
 import {
   assertDryRunCannotBeSent,
+  assertIcpTransition,
   assertOutreachTransition,
   assertSentHasApproval,
   assertVerifiedClaimHasCitation,
@@ -158,5 +159,14 @@ describe("outreach HITL rules", () => {
     expect(() =>
       assertOutreachTransition("APPROVED", "DRY_RUN_COMPLETED"),
     ).not.toThrow();
+  });
+});
+
+describe("ICP approval transitions", () => {
+  it("allows DRAFT to APPROVED and rejects illegal jumps", () => {
+    expect(() => assertIcpTransition("DRAFT", "APPROVED")).not.toThrow();
+    expect(() => assertIcpTransition("REJECTED", "APPROVED")).toThrow(
+      /cannot move/,
+    );
   });
 });

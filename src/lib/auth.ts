@@ -1,10 +1,12 @@
-import { timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { actorTypeSchema, uuidSchema, type MutationActor } from "@/domain";
 
 export type AuthContext = {
   orgId: string;
   actor: MutationActor;
 };
+
+export const SESSION_COOKIE = "gtm_session";
 
 function bearerToken(request: Request): string | undefined {
   const header = request.headers.get("authorization");
@@ -15,7 +17,7 @@ function bearerToken(request: Request): string | undefined {
   return match?.[1];
 }
 
-function safeEqual(left: string, right: string): boolean {
+export function safeEqual(left: string, right: string): boolean {
   const leftBuf = Buffer.from(left);
   const rightBuf = Buffer.from(right);
   if (leftBuf.length !== rightBuf.length) {
@@ -25,7 +27,7 @@ function safeEqual(left: string, right: string): boolean {
   return timingSafeEqual(leftBuf, rightBuf);
 }
 
-function readConfiguredSecret():
+export function readConfiguredSecret():
   | { token: string; orgId: string; actor: MutationActor }
   | null {
   const token = process.env.APP_API_TOKEN?.trim();
@@ -50,10 +52,77 @@ function readConfiguredSecret():
   };
 }
 
+export function signSessionValue(
+  secret: string,
+  issuedAtMs: number = Date.now(),
+): string {
+  const payload = `v1.${issuedAtMs}`;
+  const sig = createHmac("sha256", secret).update(payload).digest("base64url");
+  return `${payload}.${sig}`;
+}
+
+export function verifySessionValue(secret: string, raw: string): boolean {
+  const lastDot = raw.lastIndexOf(".");
+  if (lastDot <= 0) {
+    return false;
+  }
+  const payload = raw.slice(0, lastDot);
+  const sig = raw.slice(lastDot + 1);
+  if (!payload.startsWith("v1.")) {
+    return false;
+  }
+  const expected = createHmac("sha256", secret)
+    .update(payload)
+    .digest("base64url");
+  if (expected.length !== sig.length) {
+    timingSafeEqual(Buffer.from(expected), Buffer.from(expected));
+    return false;
+  }
+  return safeEqual(sig, expected);
+}
+
+export function readCookieValue(
+  request: Request,
+  name: string,
+): string | undefined {
+  const header = request.headers.get("cookie");
+  if (!header) {
+    return undefined;
+  }
+  for (const part of header.split(";")) {
+    const trimmed = part.trim();
+    const eq = trimmed.indexOf("=");
+    if (eq < 0) {
+      continue;
+    }
+    if (trimmed.slice(0, eq) === name) {
+      return decodeURIComponent(trimmed.slice(eq + 1));
+    }
+  }
+  return undefined;
+}
+
+export function authFromSessionCookie(
+  raw: string | undefined,
+): AuthContext | null {
+  const configured = readConfiguredSecret();
+  if (!configured || !raw || !verifySessionValue(configured.token, raw)) {
+    return null;
+  }
+  return {
+    orgId: configured.orgId,
+    actor: {
+      actorType: "human",
+      actorId: configured.actor.actorId,
+    },
+  };
+}
+
 /**
  * Derives org + actor only from server-side env (APP_API_TOKEN → APP_ORG_ID /
  * APP_ACTOR_*). Caller orgId, x-actor-id, x-actor-type, and query/body values
- * are ignored.
+ * are ignored. A signed session cookie is accepted for browser pages; the
+ * cookie never carries orgId.
  */
 export function getAuthContext(request: Request): AuthContext | null {
   const configured = readConfiguredSecret();
@@ -61,8 +130,8 @@ export function getAuthContext(request: Request): AuthContext | null {
     return null;
   }
   const presented = bearerToken(request);
-  if (!presented || !safeEqual(presented, configured.token)) {
-    return null;
+  if (presented && safeEqual(presented, configured.token)) {
+    return { orgId: configured.orgId, actor: configured.actor };
   }
-  return { orgId: configured.orgId, actor: configured.actor };
+  return authFromSessionCookie(readCookieValue(request, SESSION_COOKIE));
 }

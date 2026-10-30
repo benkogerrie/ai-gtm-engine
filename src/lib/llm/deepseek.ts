@@ -135,8 +135,9 @@ export class DeepSeekLlmClient implements LlmClient {
         role: "user",
         content: [
           "Your previous output was not valid JSON matching the required schema.",
-          `Validation issues: ${firstParsed.issues}`,
-          "Return a corrected JSON object only. Do not include markdown.",
+          "Validation issues (verbatim):",
+          firstParsed.issues,
+          "Return a corrected JSON object only. Do not include markdown. Use the exact field names and types from the required example shape.",
         ].join("\n"),
       },
     ];
