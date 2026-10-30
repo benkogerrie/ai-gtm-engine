@@ -3,7 +3,6 @@ import type { AppDatabase } from "@/db/client";
 import { newId } from "@/db/ids";
 import {
   createLlmClient,
-  createMockLlmClient,
   isLlmConfigured,
   type LlmClient,
 } from "@/lib/llm";
@@ -14,6 +13,12 @@ import {
   type SearchResult,
 } from "@/lib/search";
 import {
+  collectVendors,
+  filterBuyers,
+  isCredibleCompetitorCitation,
+  vendorsToCompetitorCategory,
+} from "./classify";
+import {
   extractCandidatesFromResults,
   extractCandidatesWithLlm,
   extractCompetitorCategoriesFromResults,
@@ -21,21 +26,24 @@ import {
   refineQueriesWithLlm,
 } from "./extract";
 import {
-  dedupeByDomain,
   isBlockedCompanyDomain,
   isRejectedSourceUrl,
   normalizeDomain,
 } from "./filters";
+import { hostFromUrl } from "./filters";
+import { cleanText } from "./html";
+import { dedupeByOrganization } from "./names";
 import { persistCompetitorCategories, persistProspects } from "./persist";
 import { countryFromGeographies, buildCompetitorQuery, buildDiscoveryQueries } from "./queries";
 import {
   ensureDiscoveryOrg,
   writeDiscoveryRunAudit,
 } from "./runs";
-import { scoreProspect } from "./score";
+import { scoreFromLlm, scoreProspect } from "./score";
 import {
   citationEligibleClaims,
   isClaimUrlAllowed,
+  resultByUrl,
   validateCandidates,
 } from "./validate";
 import {
@@ -44,6 +52,7 @@ import {
   type DiscoveryCandidate,
   type DiscoveryInput,
   type DiscoveryMode,
+  type DiscoveryPath,
   type DiscoveryRunSnapshot,
   type ScoredProspect,
 } from "./types";
@@ -62,7 +71,7 @@ function resolveMode(search: SearchClient, llm: LlmClient | undefined): Discover
   if (search.provider === "mock") {
     return "MOCK";
   }
-  if (!llm || llm.provider === "mock" || !isLlmConfigured()) {
+  if (!llm || llm.provider === "mock") {
     return "MOCK";
   }
   return "LIVE";
@@ -73,10 +82,10 @@ export function createDiscoveryClients(): {
   llm: LlmClient | undefined;
 } {
   const search = createSearchClient({ allowMockIfUnconfigured: true });
-  const llm = isLlmConfigured()
-    ? createLlmClient()
-    : createMockLlmClient();
-  return { search, llm: isLlmConfigured() ? llm : undefined };
+  if (!isLlmConfigured()) {
+    return { search, llm: undefined };
+  }
+  return { search, llm: createLlmClient() };
 }
 
 async function searchAll(
@@ -95,31 +104,44 @@ async function searchAll(
   return collected;
 }
 
-function mergeCandidates(
-  primary: DiscoveryCandidate[],
-  extra: DiscoveryCandidate[],
-): DiscoveryCandidate[] {
-  const byDomain = new Map<string, DiscoveryCandidate>();
-  for (const candidate of [...primary, ...extra]) {
-    const domain = normalizeDomain(candidate.domain);
-    if (!domain) {
-      continue;
-    }
-    const current = byDomain.get(domain);
-    if (!current) {
-      byDomain.set(domain, { ...candidate, domain });
-      continue;
-    }
-    byDomain.set(domain, {
-      ...current,
-      whyFit: current.whyFit.length >= candidate.whyFit.length
-        ? current.whyFit
-        : candidate.whyFit,
-      claims: [...current.claims, ...candidate.claims],
-      signals: [...current.signals, ...candidate.signals],
-    });
-  }
-  return [...byDomain.values()];
+function decorateClaims(
+  candidate: DiscoveryCandidate,
+  results: SearchResult[],
+): DiscoveryCandidate {
+  return {
+    ...candidate,
+    claims: candidate.claims.map((claim) => {
+      const result = resultByUrl(results, claim.sourceUrl);
+      return {
+        ...claim,
+        quote: cleanText(claim.quote, 400),
+        sourceTitle: claim.sourceTitle ?? (result ? cleanText(result.title) : undefined),
+        sourceDomain: claim.sourceDomain ?? hostFromUrl(claim.sourceUrl) ?? undefined,
+      };
+    }),
+  };
+}
+
+function websiteFor(domain: string): string | null {
+  const host = normalizeDomain(domain);
+  return host ? `https://${host}` : null;
+}
+
+function keepCredibleCategories(
+  categories: CompetitorCategoryInsight[],
+  results: SearchResult[],
+): CompetitorCategoryInsight[] {
+  const allowed = new Set(results.map((result) => result.url));
+  return categories.filter(
+    (category) =>
+      isClaimUrlAllowed(category.sourceUrl, allowed) &&
+      !isRejectedSourceUrl(category.sourceUrl) &&
+      isCredibleCompetitorCitation({
+        sourceUrl: category.sourceUrl,
+        quote: category.quote,
+        category: category.category,
+      }),
+  );
 }
 
 export async function runDiscovery(
@@ -131,6 +153,8 @@ export async function runDiscovery(
   const mode = resolveMode(search, llm);
   const createdAt = (deps.now ?? (() => new Date()))().toISOString();
   const runId = deps.runId ?? newId();
+  let extractionPath: DiscoveryPath = mode === "LIVE" ? "deepseek" : "heuristic";
+  let scoringPath: DiscoveryPath = mode === "LIVE" ? "deepseek" : "heuristic";
 
   await ensureDiscoveryOrg(deps.db, deps.orgId, deps.actor);
 
@@ -147,6 +171,8 @@ export async function runDiscovery(
     rejectedClaimCount: 0,
     droppedCompanyCount: 0,
     error: null,
+    extractionPath,
+    scoringPath,
     createdAt,
     updatedAt: createdAt,
   };
@@ -173,43 +199,82 @@ export async function runDiscovery(
     });
     const allResults = [...prospectResults, ...competitorResults];
 
-    const deterministic = extractCandidatesFromResults(
-      prospectResults,
-      input.excludeDomains,
-    );
-    let llmCandidates: DiscoveryCandidate[] = [];
-    if (llm) {
-      try {
-        llmCandidates = await extractCandidatesWithLlm(llm, input, prospectResults);
-      } catch {
-        llmCandidates = [];
+    let extracted: DiscoveryCandidate[] = [];
+    if (mode === "LIVE") {
+      if (!llm || llm.provider === "mock") {
+        throw new Error(
+          "LIVE discovery requires DeepSeek extraction. DEEPSEEK_API_KEY is missing or a mock LLM was supplied.",
+        );
       }
+      try {
+        extracted = await extractCandidatesWithLlm(llm, input, prospectResults);
+        extractionPath = "deepseek";
+        scoringPath = "deepseek";
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "DeepSeek extraction failed";
+        throw new Error(`DeepSeek extraction failed: ${message}`);
+      }
+    } else {
+      extracted = extractCandidatesFromResults(prospectResults, input.excludeDomains);
+      extractionPath = "heuristic";
+      scoringPath = "heuristic";
     }
 
-    const merged = mergeCandidates(llmCandidates, deterministic);
-    const validated = validateCandidates(merged, allResults);
+    const decorated = extracted.map((candidate) => decorateClaims(candidate, allResults));
+    const validated = validateCandidates(decorated, allResults);
 
     const filtered = validated.kept.filter((candidate) => {
-      if (isBlockedCompanyDomain(candidate.domain, input.excludeDomains)) {
+      const domain = normalizeDomain(candidate.domain);
+      if (domain && isBlockedCompanyDomain(domain, input.excludeDomains)) {
         return false;
       }
-      const eligible = citationEligibleClaims(candidate.claims, allResults);
-      return eligible.length > 0;
+      return citationEligibleClaims(candidate.claims, allResults).length > 0;
     });
 
-    const unique = dedupeByDomain(filtered);
-    const scored: ScoredProspect[] = unique.map((candidate) => {
+    const buyers = filterBuyers(filtered);
+    const vendors = collectVendors(filtered);
+    const uniqueBuyers = dedupeByOrganization(buyers);
+
+    const scored: ScoredProspect[] = uniqueBuyers.map((candidate) => {
+      if (mode === "LIVE") {
+        const llmScore = scoreFromLlm(candidate);
+        if (!llmScore) {
+          throw new Error(
+            `DeepSeek scoring missing for ${candidate.name}. Live path does not fall back to a heuristic score.`,
+          );
+        }
+        scoringPath = "deepseek";
+        const eligibleClaims = citationEligibleClaims(candidate.claims, allResults);
+        return {
+          name: candidate.name,
+          domain: candidate.domain,
+          websiteUrl: websiteFor(candidate.domain),
+          whyFit: cleanText(candidate.whyFit, 400),
+          fitScore: llmScore.fitScore,
+          rationale: llmScore.rationale,
+          signals: candidate.signals.filter((signal) =>
+            isClaimUrlAllowed(
+              signal.sourceUrl,
+              new Set(allResults.map((result) => result.url)),
+            ),
+          ),
+          claims: eligibleClaims,
+        };
+      }
       const { fitScore, rationale } = scoreProspect(candidate, input);
       const eligibleClaims = citationEligibleClaims(candidate.claims, allResults);
       return {
         name: candidate.name,
         domain: candidate.domain,
-        websiteUrl: `https://${candidate.domain}`,
-        whyFit: candidate.whyFit,
+        websiteUrl: websiteFor(candidate.domain),
+        whyFit: cleanText(candidate.whyFit, 400),
         fitScore,
         rationale,
         signals: candidate.signals.filter((signal) =>
-          isClaimUrlAllowed(signal.sourceUrl, new Set(allResults.map((r) => r.url))),
+          isClaimUrlAllowed(
+            signal.sourceUrl,
+            new Set(allResults.map((result) => result.url)),
+          ),
         ),
         claims: eligibleClaims,
       };
@@ -217,6 +282,15 @@ export async function runDiscovery(
 
     scored.sort((left, right) => right.fitScore - left.fitScore);
     const top = scored.slice(0, 12);
+
+    console.info("[discovery]", {
+      runId,
+      mode,
+      extractionPath,
+      scoringPath,
+      buyers: top.length,
+      vendors: vendors.length,
+    });
 
     const persistedProspects =
       search.provider === "mock"
@@ -232,31 +306,29 @@ export async function runDiscovery(
           );
 
     let competitorCategories: CompetitorCategoryInsight[] = [];
-    if (llm) {
+    if (mode === "LIVE" && llm) {
       try {
         competitorCategories = await extractCompetitorCategoriesWithLlm(
           llm,
           input,
           competitorResults,
         );
-      } catch {
-        competitorCategories = extractCompetitorCategoriesFromResults(
-          competitorResults,
-        );
+      } catch (error) {
+        console.info("[discovery] competitor LLM failed; dropping categories", {
+          runId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        competitorCategories = [];
       }
     } else {
-      competitorCategories = extractCompetitorCategoriesFromResults(
-        competitorResults,
-      );
+      competitorCategories = extractCompetitorCategoriesFromResults(competitorResults);
     }
 
-    competitorCategories = competitorCategories.filter(
-      (category) =>
-        isClaimUrlAllowed(
-          category.sourceUrl,
-          new Set(allResults.map((result) => result.url)),
-        ) && !isRejectedSourceUrl(category.sourceUrl),
-    );
+    const vendorCategory = vendorsToCompetitorCategory(vendors);
+    if (vendorCategory) {
+      competitorCategories = [vendorCategory, ...competitorCategories];
+    }
+    competitorCategories = keepCredibleCategories(competitorCategories, allResults);
 
     const persistedCategories =
       search.provider === "mock"
@@ -280,6 +352,8 @@ export async function runDiscovery(
       competitorCategories: persistedCategories,
       rejectedClaimCount: validated.rejectedClaimCount,
       droppedCompanyCount: droppedForMissingCitation,
+      extractionPath,
+      scoringPath,
       updatedAt: (deps.now ?? (() => new Date()))().toISOString(),
     };
 
@@ -294,6 +368,8 @@ export async function runDiscovery(
       ...snapshot,
       status: "failed",
       error: error instanceof Error ? error.message : "Discovery run failed",
+      extractionPath,
+      scoringPath,
       updatedAt: (deps.now ?? (() => new Date()))().toISOString(),
     };
     await writeDiscoveryRunAudit(

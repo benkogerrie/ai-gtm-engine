@@ -1,3 +1,4 @@
+import { cleanText } from "./html";
 import type { DiscoveryCandidate, DiscoveryInput } from "./types";
 
 function mentions(haystack: string, needles: string[] | undefined): boolean {
@@ -55,11 +56,30 @@ export function scoreProspect(
   }
 
   fitScore = Math.max(0, Math.min(100, fitScore));
-  const rationale =
+  const rationale = cleanText(
     reasons.length > 0
       ? `${candidate.whyFit} Score ${fitScore}: ${reasons.join("; ")}.`
-      : candidate.whyFit;
+      : candidate.whyFit,
+    400,
+  );
   return { fitScore, rationale };
+}
+
+export function scoreFromLlm(candidate: DiscoveryCandidate): {
+  fitScore: number;
+  rationale: string;
+} | null {
+  if (
+    typeof candidate.fitScore !== "number" ||
+    !candidate.rationale ||
+    !candidate.rationale.trim()
+  ) {
+    return null;
+  }
+  return {
+    fitScore: Math.max(0, Math.min(100, Math.round(candidate.fitScore))),
+    rationale: cleanText(candidate.rationale, 400),
+  };
 }
 
 export function fitTierFromScore(fitScore: number): "A" | "B" | "C" {

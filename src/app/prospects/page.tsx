@@ -15,15 +15,59 @@ import { ProspectsForm } from "./prospects-form";
 export const maxDuration = 60;
 export const instant = false;
 
-function MockBadge({ mode }: { mode: "LIVE" | "MOCK" }) {
-  if (mode !== "MOCK") {
-    return null;
-  }
+function ModeBadge({ mode }: { mode: "LIVE" | "MOCK" }) {
+  const live = mode === "LIVE";
   return (
-    <span className="rounded-full border border-[var(--rule)] px-2 py-0.5 text-[10px] tracking-[0.14em] text-[var(--muted)] uppercase">
-      MOCK
+    <span
+      className={
+        live
+          ? "rounded-full bg-emerald-800 px-2.5 py-0.5 text-[10px] font-semibold tracking-[0.16em] text-white uppercase"
+          : "rounded-full border border-[var(--rule)] bg-[var(--card)] px-2.5 py-0.5 text-[10px] font-semibold tracking-[0.16em] text-[var(--muted)] uppercase"
+      }
+    >
+      {live ? "LIVE" : "MOCK"}
     </span>
   );
+}
+
+function pathLabel(run: DiscoveryRunSnapshot): string {
+  const extraction = run.extractionPath ?? (run.mode === "LIVE" ? "deepseek" : "heuristic");
+  const scoring = run.scoringPath ?? extraction;
+  if (extraction === "deepseek" && scoring === "deepseek") {
+    return "Path: DeepSeek extraction + scoring";
+  }
+  if (extraction === "heuristic") {
+    return "Path: heuristic (MOCK)";
+  }
+  return `Path: extract ${extraction} · score ${scoring}`;
+}
+
+function uniqueSources(
+  claims: DiscoveryRunSnapshot["prospects"][number]["claims"],
+) {
+  const seen = new Set<string>();
+  const sources: Array<{
+    url: string;
+    title: string;
+    domain: string;
+  }> = [];
+  for (const claim of claims) {
+    if (seen.has(claim.sourceUrl)) {
+      continue;
+    }
+    seen.add(claim.sourceUrl);
+    let domain = claim.sourceDomain ?? "";
+    if (!domain) {
+      try {
+        domain = new URL(claim.sourceUrl).hostname.replace(/^www\./, "");
+      } catch {
+        domain = claim.sourceUrl;
+      }
+    }
+    const title = claim.sourceTitle?.trim() || domain;
+    sources.push({ url: claim.sourceUrl, title, domain });
+  }
+  return sources;
 }
 
 function RunPanel({ run }: { run: DiscoveryRunSnapshot }) {
@@ -31,7 +75,7 @@ function RunPanel({ run }: { run: DiscoveryRunSnapshot }) {
     <section className="mt-10">
       <div className="flex flex-wrap items-center gap-3">
         <h2 className="font-serif text-2xl tracking-tight">Prospects</h2>
-        <MockBadge mode={run.mode} />
+        <ModeBadge mode={run.mode} />
         <span className="text-xs tracking-wide text-[var(--muted)] uppercase">
           {run.status}
         </span>
@@ -41,15 +85,22 @@ function RunPanel({ run }: { run: DiscoveryRunSnapshot }) {
         claims dropped · {run.droppedCompanyCount} companies dropped
         {run.icpId ? ` · ICP ${run.icpId.slice(0, 8)}` : ""}
       </p>
+      <p className="mt-1 text-xs tracking-wide text-[var(--muted)] uppercase">
+        {pathLabel(run)}
+      </p>
       {run.error ? (
-        <p className="mt-3 text-sm text-red-800">{run.error}</p>
+        <p className="mt-3 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
+          {run.error}
+        </p>
       ) : null}
 
       {run.prospects.length === 0 ? (
         <p className="mt-6 rounded-lg border border-[var(--rule)] bg-[var(--card)] p-5 text-sm text-[var(--muted)]">
-          {run.mode === "MOCK"
-            ? "MOCK run: synthetic search hits are never stored as citations, so no fabricated companies are shown. Add BRAVE_SEARCH_API_KEY and DEEPSEEK_API_KEY for a live run."
-            : "No cited prospects survived validation for this run."}
+          {run.status === "failed"
+            ? "This run failed. The live DeepSeek path does not silently fall back to a heuristic."
+            : run.mode === "MOCK"
+              ? "MOCK run: synthetic search hits are never stored as citations, so no fabricated companies are shown. Add BRAVE_SEARCH_API_KEY and DEEPSEEK_API_KEY for a live run."
+              : "No cited buyer organizations survived validation for this run."}
         </p>
       ) : (
         <div className="mt-6 overflow-x-auto rounded-lg border border-[var(--rule)] bg-[var(--card)]">
@@ -65,12 +116,27 @@ function RunPanel({ run }: { run: DiscoveryRunSnapshot }) {
             <tbody>
               {run.prospects.map((prospect) => (
                 <tr
-                  key={prospect.companyId ?? prospect.domain}
+                  key={prospect.companyId ?? `${prospect.name}-${prospect.domain}`}
                   className="border-b border-[var(--rule)] last:border-b-0 align-top"
                 >
                   <td className="px-4 py-3">
                     <p className="font-medium">{prospect.name}</p>
-                    <p className="text-xs text-[var(--muted)]">{prospect.domain}</p>
+                    {prospect.domain ? (
+                      prospect.websiteUrl ? (
+                        <a
+                          href={prospect.websiteUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-[var(--muted)] underline decoration-[var(--rule)] underline-offset-2"
+                        >
+                          {prospect.domain}
+                        </a>
+                      ) : (
+                        <p className="text-xs text-[var(--muted)]">
+                          {prospect.domain}
+                        </p>
+                      )
+                    ) : null}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     {prospect.fitScore}
@@ -89,15 +155,18 @@ function RunPanel({ run }: { run: DiscoveryRunSnapshot }) {
                   </td>
                   <td className="px-4 py-3">
                     <ul className="grid gap-1">
-                      {prospect.claims.map((claim) => (
-                        <li key={`${claim.field}-${claim.sourceUrl}`}>
+                      {uniqueSources(prospect.claims).map((source) => (
+                        <li key={source.url}>
                           <a
-                            href={claim.sourceUrl}
+                            href={source.url}
                             target="_blank"
                             rel="noreferrer"
                             className="underline decoration-[var(--rule)] underline-offset-2"
                           >
-                            {claim.field}: {claim.value}
+                            {source.title}
+                            {source.domain && source.title !== source.domain
+                              ? ` · ${source.domain}`
+                              : ""}
                           </a>
                         </li>
                       ))}
@@ -116,27 +185,35 @@ function RunPanel({ run }: { run: DiscoveryRunSnapshot }) {
             Competitor categories
           </h3>
           <ul className="mt-4 grid gap-3">
-            {run.competitorCategories.map((category) => (
-              <li
-                key={`${category.category}-${category.sourceUrl}`}
-                className="rounded-lg border border-[var(--rule)] bg-[var(--card)] p-4 text-sm"
-              >
-                <p className="font-medium">{category.category}</p>
-                {category.examples.length > 0 ? (
-                  <p className="mt-1 text-[var(--muted)]">
-                    {category.examples.join(", ")}
-                  </p>
-                ) : null}
-                <a
-                  href={category.sourceUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-2 inline-block underline decoration-[var(--rule)] underline-offset-2"
+            {run.competitorCategories.map((category) => {
+              let domain = "";
+              try {
+                domain = new URL(category.sourceUrl).hostname.replace(/^www\./, "");
+              } catch {
+                domain = category.sourceUrl;
+              }
+              return (
+                <li
+                  key={`${category.category}-${category.sourceUrl}`}
+                  className="rounded-lg border border-[var(--rule)] bg-[var(--card)] p-4 text-sm"
                 >
-                  Source
-                </a>
-              </li>
-            ))}
+                  <p className="font-medium">{category.category}</p>
+                  {category.examples.length > 0 ? (
+                    <p className="mt-1 text-[var(--muted)]">
+                      {category.examples.join(", ")}
+                    </p>
+                  ) : null}
+                  <a
+                    href={category.sourceUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 inline-block underline decoration-[var(--rule)] underline-offset-2"
+                  >
+                    {domain}
+                  </a>
+                </li>
+              );
+            })}
           </ul>
         </div>
       ) : null}

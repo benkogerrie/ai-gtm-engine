@@ -74,20 +74,19 @@ export function validateCandidates(
   let droppedCompanyCount = 0;
 
   for (const candidate of candidates) {
-    const domain = normalizeDomain(candidate.domain);
+    const domain = normalizeDomain(candidate.domain) ?? candidate.domain ?? "";
     const { kept: claims, rejectedCount } = keepCitedClaims(
       candidate.claims,
       allowed,
     );
     rejectedClaimCount += rejectedCount;
-    if (!domain || claims.length === 0) {
+    if (claims.length === 0) {
       droppedCompanyCount += 1;
       continue;
     }
     kept.push({
       ...candidate,
       domain,
-      claims,
       signals: candidate.signals.filter((signal) =>
         isClaimUrlAllowed(signal.sourceUrl, allowed),
       ),

@@ -8,19 +8,20 @@ Evidence-backed prospect discovery for the AI GTM Engine. From an approved ICP (
 
 1. Build 3–6 deterministic Brave queries aimed at concrete orgs (hospitals announcing staffing / scheduling / EHR changes). Healthcare ICPs get a hospital/health-system pack and `-best -top -listicle` exclusions.
 2. Search via `SearchClient`. The Brave client already serializes calls through `SearchRateLimiter` (~1 req/s).
-3. Extract candidate companies from those results (LLM when available, plus a deterministic title/domain fallback). Every claim must cite a result URL from **this** run.
-4. Server-side validation drops claims whose URL is not in the result set, then drops companies with no remaining claim.
-5. Negative filters: aggregators / listicles / directories (Wikipedia, LinkedIn lists, G2, Crunchbase hubs, news-roundup hosts), `excludeDomains`.
-6. Deduplicate by registrable domain.
-7. Fit score `0..100` with a short rationale (light heuristic; B005 owns full scoring).
-8. Persist companies, citations, and field assertions with audit events. Claims are stored as `INFERRED`.
-9. Separate competitor-category step, also citation-required.
+3. **LIVE** (`BRAVE` + DeepSeek): extract + score with DeepSeek. The prompt includes a concrete JSON example and B003-style normalization. If that call fails, the run **fails** — no silent heuristic fallback. **MOCK**: heuristic extract/score only, labeled in the UI.
+4. Names are **organization names** (Ochsner Health, UCHealth), never article titles. A `news.ochsner.org` or PR Newswire URL is a citation for the hospital in the article.
+5. Each candidate is classified `buyer | vendor_competitor | media_research`. Only buyers become prospects. Vendors are routed to competitor categories. Media/research (PubMed, newswires as the subject) are dropped. Dedupe is by organization, not URL.
+6. Server-side validation drops claims whose URL is not in the result set, then drops companies with no remaining claim. HTML tags/entities are stripped from names, rationales, and snippets.
+7. Negative filters: aggregators / listicles / directories (Wikipedia, LinkedIn lists, G2, Crunchbase hubs), `excludeDomains`.
+8. Fit score `0..100` with a rationale grounded in the cited signal (DeepSeek on LIVE).
+9. Persist companies, citations, and field assertions with audit events. Claims are stored as `INFERRED`.
+10. Competitor categories need a real, relevant citation (junk hosts like wpauthorbox / simplescheduleai are dropped).
 
 Demo ICP: **ShiftPilot** (AI shift scheduling for hospitals/clinics) → US hospitals and health systems.
 
 ## Mock vs live
 
-The run is labeled **MOCK** when the search provider is `mock` **or** no live LLM key is configured (`DEEPSEEK_API_KEY`). Mock search hits never become citations (`toCitationCandidate` / `isRealSearchEvidence`).
+The run is labeled **LIVE** or **MOCK** in the UI, plus the extraction/scoring path (`DeepSeek` vs heuristic). MOCK when the search provider is `mock` **or** the LLM is missing/mock. Mock search hits never become citations (`toCitationCandidate` / `isRealSearchEvidence`).
 
 Live mode needs `BRAVE_SEARCH_API_KEY` and `DEEPSEEK_API_KEY`. `pnpm test:live` includes `src/lib/discovery/discovery.live.test.ts` (skipped without both keys).
 

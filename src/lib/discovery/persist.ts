@@ -79,13 +79,13 @@ export async function persistProspects(
   const persisted: ScoredProspect[] = [];
 
   for (const prospect of prospects) {
-    const websiteUrl = prospect.websiteUrl ?? `https://${prospect.domain}`;
+    const websiteUrl = prospect.websiteUrl;
     const company = await createCompany(
       db,
       {
         orgId,
         name: prospect.name,
-        domain: prospect.domain,
+        domain: prospect.domain || null,
         websiteUrl,
         industry,
         region,
@@ -96,15 +96,15 @@ export async function persistProspects(
       actor,
     );
 
-    const fieldClaims: DiscoveryClaim[] = [
-      ...prospect.claims,
-      {
+    const fieldClaims: DiscoveryClaim[] = [...prospect.claims];
+    if (prospect.claims[0]?.sourceUrl) {
+      fieldClaims.push({
         field: "fitScore",
         value: String(prospect.fitScore),
-        sourceUrl: prospect.claims[0]?.sourceUrl ?? websiteUrl,
+        sourceUrl: prospect.claims[0].sourceUrl,
         quote: prospect.rationale,
-      },
-    ];
+      });
+    }
 
     for (const claim of fieldClaims) {
       const citationId = await persistClaimCitation(

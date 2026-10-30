@@ -40,6 +40,8 @@ export const discoveryClaimSchema = z.object({
   value: z.string().min(1),
   sourceUrl: z.string().min(1),
   quote: z.string().min(1),
+  sourceTitle: z.string().optional(),
+  sourceDomain: z.string().optional(),
 });
 export type DiscoveryClaim = z.infer<typeof discoveryClaimSchema>;
 
@@ -49,10 +51,23 @@ export const discoverySignalSchema = z.object({
 });
 export type DiscoverySignal = z.infer<typeof discoverySignalSchema>;
 
+export const candidateRoleSchema = z.enum([
+  "buyer",
+  "vendor_competitor",
+  "media_research",
+]);
+export type CandidateRole = z.infer<typeof candidateRoleSchema>;
+
+export const discoveryPathSchema = z.enum(["deepseek", "heuristic"]);
+export type DiscoveryPath = z.infer<typeof discoveryPathSchema>;
+
 export const discoveryCandidateSchema = z.object({
   name: z.string().min(1),
-  domain: z.string().min(1),
+  domain: z.string().default(""),
+  role: candidateRoleSchema.optional(),
   whyFit: z.string().min(1),
+  fitScore: z.number().int().min(0).max(100).optional(),
+  rationale: z.string().optional(),
   signals: z.array(discoverySignalSchema).default([]),
   claims: z.array(discoveryClaimSchema).min(1),
 });
@@ -61,7 +76,7 @@ export type DiscoveryCandidate = z.infer<typeof discoveryCandidateSchema>;
 export const scoredProspectSchema = z.object({
   companyId: z.string().optional(),
   name: z.string().min(1),
-  domain: z.string().min(1),
+  domain: z.string(),
   websiteUrl: z.string().nullable(),
   whyFit: z.string().min(1),
   fitScore: z.number().int().min(0).max(100),
@@ -95,6 +110,8 @@ export const discoveryRunSnapshotSchema = z.object({
   rejectedClaimCount: z.number().int().nonnegative(),
   droppedCompanyCount: z.number().int().nonnegative(),
   error: z.string().nullable(),
+  extractionPath: discoveryPathSchema.optional(),
+  scoringPath: discoveryPathSchema.optional(),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
 });
@@ -106,8 +123,14 @@ export const DISCOVERY_RUN_ACTIONS = {
   FAILED: "discovery.run.failed",
 } as const;
 
+export const llmProspectCompanySchema = discoveryCandidateSchema.extend({
+  role: candidateRoleSchema,
+  fitScore: z.number().int().min(0).max(100),
+  rationale: z.string().min(1),
+});
+
 export const llmProspectsSchema = z.object({
-  companies: z.array(discoveryCandidateSchema),
+  companies: z.array(llmProspectCompanySchema),
 });
 export type LlmProspects = z.infer<typeof llmProspectsSchema>;
 
