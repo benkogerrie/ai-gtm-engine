@@ -24,6 +24,9 @@
   --border: oklch(0.895 0 0);
   --input: oklch(0.895 0 0);
   --ring: oklch(0.52 0.14 10);
+  --needs-input: oklch(0.46 0.08 85);
+  --needs-input-soft: oklch(0.97 0.04 95);
+  --needs-input-border: oklch(0.82 0.08 90);
 }
 
 @theme inline {
@@ -48,6 +51,9 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-needs-input: var(--needs-input);
+  --color-needs-input-soft: var(--needs-input-soft);
+  --color-needs-input-border: var(--needs-input-border);
   --font-sans: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-instrument-serif), Georgia, serif;
   --font-display: var(--font-instrument-serif), Georgia, serif;

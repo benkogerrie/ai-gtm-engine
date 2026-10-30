@@ -74,10 +74,11 @@ Expect: no org id, actor id, or secret in the page source.
 
 ### 2. Intake — `/intake`
 
-1. Fill the ShiftPilot fields above. Submit.
-2. The engine calls DeepSeek, validates JSON, and redirects to `/icp/<id>`.
+1. Optional: paste a public product website and click **Read my site**. Wait for **Reading your site…**. Review the prefilled fields (INFERRED / suggested from the host). Pages read appear as links. Fields the site did not support stay empty and are highlighted yellow (**Nog invullen · Needs input**) until you type. If the reader fails, the form stays usable — fill ShiftPilot by hand.
+2. Fill or correct the ShiftPilot fields above. Submit.
+3. The engine calls DeepSeek, validates JSON, and redirects to `/icp/<id>`.
 
-Expect: no **MOCK output** banner when the key is set. If inference fails (invalid JSON after one repair), you stay on intake with an error — nothing is silently accepted.
+Expect: no **MOCK output** banner when the key is set. Site autofill also says **MOCK** when DeepSeek is unset. If inference fails (invalid JSON after one repair), you stay on intake with an error — nothing is silently accepted.
 
 ### 3. Approve the ICP — `/icp/<id>`
 
