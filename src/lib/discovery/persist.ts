@@ -6,6 +6,7 @@ import {
   createCompetitor,
   createFieldAssertion,
   listCompanies,
+  updateCompany,
 } from "@/db/repository";
 import { isRealSearchEvidence, toCitationCandidate } from "@/lib/search/evidence";
 import type { SearchResult } from "@/lib/search/types";
@@ -89,25 +90,39 @@ export async function persistProspects(
         { name: prospect.name, domain: prospect.domain },
       ),
     );
-    const company =
-      existing ??
-      (await createCompany(
-        db,
-        {
+    const company = existing
+      ? ((await updateCompany(
+          db,
+          existing.id,
           orgId,
-          name: prospect.name,
-          domain: prospect.domain || null,
-          websiteUrl,
-          industry,
-          region,
-          fitScore: prospect.fitScore,
-          fitTier: fitTierFromScore(prospect.fitScore),
-          negativeSignals: [],
-        },
-        actor,
-      ));
+          {
+            fitScore: prospect.fitScore,
+            fitTier: fitTierFromScore(prospect.fitScore),
+          },
+          actor,
+        )) ?? existing)
+      : await createCompany(
+          db,
+          {
+            orgId,
+            name: prospect.name,
+            domain: prospect.domain || null,
+            websiteUrl,
+            industry,
+            region,
+            fitScore: prospect.fitScore,
+            fitTier: fitTierFromScore(prospect.fitScore),
+            negativeSignals: [],
+          },
+          actor,
+        );
     if (!existing) {
       known.push(company);
+    } else {
+      const index = known.findIndex((row) => row.id === company.id);
+      if (index >= 0) {
+        known[index] = company;
+      }
     }
 
     const fieldClaims: DiscoveryClaim[] = [...prospect.claims];

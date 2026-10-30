@@ -177,12 +177,6 @@ describe("loadDashboard latest completed run", () => {
         createdAt: "2026-10-30T00:00:00.000Z",
         prospects: [
           prospect("HCA Healthcare", "hcahealthcare.com", hca.id, 70),
-          prospect(
-            "Inha University Hospital",
-            "inha.ac.kr",
-            newId(),
-            40,
-          ),
         ],
       }),
       actor,

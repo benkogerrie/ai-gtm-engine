@@ -18,7 +18,7 @@ import {
   type CreateProductInput,
   type CreateSignalInput,
 } from "../domain/entities";
-import type { EntityType, OutreachStatus } from "../domain/enums";
+import type { EntityType, FitTier, OutreachStatus } from "../domain/enums";
 import {
   createCitationInputSchema,
   createFieldAssertionInputSchema,
@@ -344,6 +344,48 @@ export async function listCompanies(db: AppDatabase, orgId: string) {
     .from(companies)
     .where(eq(companies.orgId, orgId))
     .orderBy(desc(companies.updatedAt));
+}
+
+export async function updateCompany(
+  db: AppDatabase,
+  id: string,
+  orgId: string,
+  patch: Partial<{
+    fitScore: number | null;
+    fitTier: FitTier | null;
+  }>,
+  actor: MutationActor,
+  action = "company.update",
+) {
+  const current = await getCompanyForOrg(db, id, orgId);
+  if (!current) {
+    throw new DomainError(
+      "ENTITY_NOT_FOUND",
+      "Company was not found for this org",
+    );
+  }
+  const stamped = now();
+  const next = { ...patch, updatedAt: stamped };
+  return withAudit(
+    db,
+    {
+      orgId: current.orgId,
+      actor,
+      action,
+      entityType: "company",
+      entityId: current.id,
+      before: current,
+      after: { ...current, ...next },
+    },
+    async (tx) => {
+      const [updated] = await tx
+        .update(companies)
+        .set(next)
+        .where(eq(companies.id, current.id))
+        .returning();
+      return updated;
+    },
+  );
 }
 
 export async function listSignalsForCompany(

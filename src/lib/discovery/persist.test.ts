@@ -11,13 +11,18 @@ const actor = { actorType: "agent" as const, actorId: "discovery" };
 
 const retrievedAt = new Date("2026-10-30T00:00:00.000Z").toISOString();
 
-function prospect(name: string, domain: string, url: string): ScoredProspect {
+function prospect(
+  name: string,
+  domain: string,
+  url: string,
+  fitScore = 80,
+): ScoredProspect {
   return {
     name,
     domain,
     websiteUrl: `https://${domain}`,
     whyFit: "Nurse scheduling rollout",
-    fitScore: 80,
+    fitScore,
     rationale: "Cited scheduling launch",
     evidenceRelevance: "strong",
     signals: [],
@@ -89,5 +94,41 @@ describe("persistProspects org reuse", () => {
     const companies = await listCompanies(handle.db, orgId);
     expect(companies).toHaveLength(1);
     expect(companies[0]?.name).toMatch(/HCA/i);
+  });
+
+  it("writes the new run score onto the reused company row", async () => {
+    const results = [
+      {
+        title: "UCHealth nurse scheduling",
+        url: "https://uchealth.org/nurses",
+        snippet: "UCHealth nurse scheduling",
+        source: "brave" as const,
+        retrievedAt,
+      },
+    ];
+
+    await persistProspects(
+      handle.db,
+      orgId,
+      actor,
+      [prospect("UCHealth", "uchealth.org", results[0]!.url, 80)],
+      results,
+      "hospitals",
+      "United States",
+    );
+    await persistProspects(
+      handle.db,
+      orgId,
+      actor,
+      [prospect("UCHealth", "uchealth.org", results[0]!.url, 70)],
+      results,
+      "hospitals",
+      "United States",
+    );
+
+    const companies = await listCompanies(handle.db, orgId);
+    expect(companies).toHaveLength(1);
+    expect(companies[0]?.fitScore).toBe(70);
+    expect(companies[0]?.fitTier).toBe("B");
   });
 });

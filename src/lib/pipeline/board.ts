@@ -6,7 +6,6 @@ import {
   listIcpsForOrg,
   listOutreachForOrg,
 } from "@/db/repository";
-import { isOutsideIcpGeography } from "@/lib/discovery/geography";
 import { labelDiscoveryClaim } from "@/lib/discovery/labels";
 import { aggregateByOrganization } from "@/lib/discovery/names";
 import { listDiscoveryRuns } from "@/lib/discovery/runs";
@@ -176,10 +175,7 @@ export async function loadDashboard(
   const completed = listed.filter((run) => run.status === "completed");
   const selectedRun = selectDashboardRun(listed, options.runId);
   const runProspects = selectedRun
-    ? (selectedRun.prospects as ScoredProspect[]).filter(
-        (prospect) =>
-          !isOutsideIcpGeography(prospect, selectedRun.input.geographies),
-      )
+    ? (selectedRun.prospects as ScoredProspect[])
     : [];
   const aggregated = aggregateByOrganization(runProspects);
 
