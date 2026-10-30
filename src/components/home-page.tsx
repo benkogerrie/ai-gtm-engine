@@ -14,7 +14,7 @@ export function HomePage() {
           Closed-loop go-to-market
         </p>
         <h1 className="font-serif mt-4 max-w-3xl text-4xl leading-tight tracking-tight text-balance sm:text-6xl">
-          AI GTM Engine
+          Seed to Saga
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-relaxed text-pretty text-muted-foreground">
           Unify intake, discovery, graph reasoning, verified outreach and pipeline

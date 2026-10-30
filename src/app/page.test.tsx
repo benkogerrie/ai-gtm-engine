@@ -12,7 +12,7 @@ describe("Home page", () => {
     render(<Home />);
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "AI GTM Engine" }),
+      screen.getByRole("heading", { level: 1, name: "Seed to Saga" }),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/unify intake, discovery, graph reasoning/i),

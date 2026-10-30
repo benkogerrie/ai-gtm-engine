@@ -17,7 +17,7 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "AI GTM Engine",
+  title: "Seed to Saga",
   description:
     "Closed-loop go-to-market engine for ICP intake, discovery, knowledge graph reasoning, verified outreach, and pipeline analytics.",
   icons: {

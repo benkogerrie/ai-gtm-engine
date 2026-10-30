@@ -11,8 +11,7 @@ export function BrandMark({ className }: { className?: string }) {
       href="/"
       className={cn("truncate text-lg font-medium", className)}
     >
-      AI GTM Engine
-      <span className="text-primary">.ai</span>
+      Seed to <span className="text-primary">Saga</span>
     </Link>
   );
 }

@@ -17,10 +17,10 @@ export default async function LoginPage({
 
   return (
     <AppShell eyebrow="B003 · Sign in">
-      <h1 className="font-serif text-4xl tracking-tight">Sign in</h1>
+      <h1 className="font-serif text-4xl tracking-tight">Seed to Saga</h1>
       <p className="mt-3 max-w-xl text-muted-foreground">
-        Enter the server APP_API_TOKEN once. Org and actor are derived on the
-        server — never sent from the browser.
+        Sign in. Enter the server APP_API_TOKEN once. Org and actor are derived
+        on the server — never sent from the browser.
       </p>
       <LoginForm next={next} configured={isAuthConfigured()} />
     </AppShell>

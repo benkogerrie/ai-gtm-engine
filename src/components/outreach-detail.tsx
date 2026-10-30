@@ -105,7 +105,7 @@ export function OutreachDetail({
 
       <article className="border-y py-6">
         <p className="mb-4 text-xs text-muted-foreground">
-          From <span className="text-foreground">AI GTM Engine</span>
+          From <span className="text-foreground">Seed to Saga</span>
           {view.companyName ? (
             <>
               {" "}
