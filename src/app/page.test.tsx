@@ -8,7 +8,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("Home page", () => {
-  it("renders the product title, description, and coming-soon modules", () => {
+  it("renders the product title, description, and module links", () => {
     render(<Home />);
 
     expect(
@@ -24,9 +24,7 @@ describe("Home page", () => {
       ).toBeInTheDocument();
     }
 
-    expect(screen.getAllByText("Coming soon")).toHaveLength(
-      PRODUCT_MODULES.length - 4,
-    );
+    expect(screen.queryByText("Coming soon")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Discovery" })).toHaveAttribute(
       "href",
       "/prospects",
@@ -41,5 +39,8 @@ describe("Home page", () => {
     expect(
       screen.getByRole("link", { name: "Enrichment & Outreach" }),
     ).toHaveAttribute("href", "/outreach");
+    expect(
+      screen.getByRole("link", { name: "Knowledge Graph" }),
+    ).toHaveAttribute("href", "/graph");
   });
 });

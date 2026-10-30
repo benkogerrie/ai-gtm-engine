@@ -28,7 +28,9 @@ flowchart LR
   intake --> icp["/icp/id"]
   icp -->|"Approve ICP"| discover["/prospects"]
   discover -->|"cited Company"| outreach["/outreach/id"]
+  discover --> graph["/graph"]
   outreach -->|"Approve + Send dry run"| dash["/dashboard"]
+  dash --> graph
 ```
 
 Demo product: **ShiftPilot** (AI shift scheduling for hospitals and clinics) → US hospitals and health systems. See [DEMO_SCRIPT.md](./DEMO_SCRIPT.md).
@@ -51,7 +53,7 @@ flowchart TB
   repo --> audit["append-only audit_events"]
 ```
 
-- **Pages** (`/intake`, `/icp`, `/prospects`, `/outreach`, `/dashboard`, `/pipeline`): `src/proxy.ts` redirects unauthenticated browsers to `/login?next=…`. The `next` target is allowlisted in `src/lib/login-redirect.ts`. After login the cookie is signed with `APP_API_TOKEN` and does not carry `orgId`.
+- **Pages** (`/intake`, `/icp`, `/prospects`, `/outreach`, `/dashboard`, `/pipeline`, `/graph`): `src/proxy.ts` redirects unauthenticated browsers to `/login?next=…`. The `next` target is allowlisted in `src/lib/login-redirect.ts`. After login the cookie is signed with `APP_API_TOKEN` and does not carry `orgId`.
 - **Public demo**: `PUBLIC_DEMO_MODE=true` (or unset on Vercel Preview) skips the token/cookie gate. `getPageAuth` / `getAuthContext` / `proxy` map to the server `APP_ORG_ID` and a human demo actor. `/login` redirects to `/intake` (or `next`). `PUBLIC_DEMO_MODE=false` restores token auth. Expensive demo actions are rate-limited in `src/lib/demo-rate-limit.ts`.
 - **Data APIs**: `getAuthContext` accepts the bearer token **or** the session cookie (or demo mapping). Missing/invalid auth → **401**. Invalid bodies → **400**. Domain-rule violations → **400** with `{ code }`. Demo rate-limit exceeded → **429**.
 - **Public**: `GET /api/health`, `GET /api/llm/health`, `GET /api/search/health` (health routes read env only and never return keys).
@@ -73,6 +75,7 @@ src/
     discovery/    Brave queries → cited prospects
     outreach/     citation-grounded drafts + HITL
     pipeline/     dashboard snapshot + stage derivation
+    graph/        derived knowledge graph + Dijkstra path match
     site-intake/  website reader for /intake autofill (SSRF-safe fetch + DeepSeek)
 drizzle/          committed SQL migrations (0000–0002)
 docs/             this file and slice docs
@@ -130,8 +133,9 @@ Details: [llm.md](./llm.md), [search.md](./search.md).
 | B004a | `src/lib/search` | Brave provider + synthetic-evidence guard |
 | B008 | `/outreach`, `/outreach/[id]` | Citation-grounded email + LinkedIn draft; approve / reject / dry-run |
 | B009 | `/dashboard` | One row per org, evidence labels, pipeline from recorded data only |
+| B014 | `/graph` | Derived knowledge graph + automated seller→prospect path match |
 
-Not built on `main` yet: scoring/tiers as a standalone engine (B005), graph store (B006 — `relationship_edges` in Postgres is the stand-in), enrichment (B007), Band Desktop (B010), Flexprice / Snyk extras (B011), submission packaging (B012).
+Not built on `main` yet: scoring/tiers as a standalone engine (B005), graph store (B006 — `relationship_edges` in Postgres is the stand-in; B014 derives a demo graph in memory from existing records), enrichment (B007), Band Desktop (B010), Flexprice / Snyk extras (B011), submission packaging (B012).
 
 ### Intake and ICP
 
@@ -157,6 +161,33 @@ Automatic board stages come **only** from recorded rows. `REJECTED` is a **separ
 
 `REPLIED`, `MEETING_BOOKED`, and `CLOSED_LOST` are **manual** human-asserted stages stored as `pipeline.stage.move` audit events (actor + timestamp). They are not system-verified. Auto stages cannot be entered without the matching record.
 
+### Graph
+
+`loadGraph` pins to the same latest **completed** discovery run as the dashboard (older completed runs stay selectable). The graph is **derived** in process from stored ICP, product, run snapshot, claims, and citations. No new tables. Nodes that cannot be read from those records are omitted.
+
+| Node | Source |
+| --- | --- |
+| Seller | Intake product name (or the stored product summary prefix) |
+| ICP | Selected ICP |
+| Attribute | ICP industries / NAICS, personas, trigger summaries |
+| Prospect | Named orgs on the run (HCA-style duplicates collapsed) |
+| Claim | Stored discovery claims |
+| Source | Claim `sourceUrl` |
+
+| Edge | Evidence |
+| --- | --- |
+| seller `DEFINES` ICP | `INFERRED` (ICP fields are model judgement) |
+| ICP `TARGETS` industry / persona / signal | `INFERRED` |
+| prospect `IN_INDUSTRY` / `HAS_SIGNAL` attribute | From cited claims, signals, or stored industry/fit text. `VERIFIED` only when a retrieved cited source URL backs the mention |
+| claim `ABOUT` prospect | Same label as the claim |
+| claim `CITES` source | Same label as the claim |
+
+**Automated matching** is weighted shortest path (Dijkstra) from the seller (fallback: ICP) to each prospect. Edges are treated as undirected for search. Weights: `VERIFIED = 1`, `INFERRED = 3`, `source-candidate = 5`. Ties break by hop count, then lexicographic node-id sequence, then prospect name. Unreachable prospects (no derived attribute link) are omitted from the ranking. The explanation is built only from node labels and edge source URLs, e.g. `ShiftPilot → US hospitals ICP → NAICS 622110 → Montefiore, evidence: https://…`.
+
+`VERIFIED` still means the claim is backed by a real, retrieved, cited source URL — not independently verified by a human or a second source.
+
+MOCK runs are labeled. Empty runs show an honest empty state. No sample graph is injected.
+
 ## Persistence
 
 - Migrations in `drizzle/` (`0000_domain_model`, `0001_cto_review_guards`, `0002_icp_engine`). Applied by `pnpm db:migrate`, tests, and the first API request.
@@ -181,7 +212,7 @@ Automatic board stages come **only** from recorded rows. `REJECTED` is a **separ
 | GET/POST | `/api/outreach` | required | |
 | GET/POST | `/api/outreach/[id]` | required | POST actions: `edit`, `regenerate`, `approve`, `reject`, `dry-run` |
 
-Pages: `/`, `/login`, `/intake`, `/icp`, `/icp/[id]`, `/prospects`, `/outreach`, `/outreach/new`, `/outreach/[id]`, `/dashboard`.
+Pages: `/`, `/login`, `/intake`, `/icp`, `/icp/[id]`, `/prospects`, `/outreach`, `/outreach/new`, `/outreach/[id]`, `/dashboard`, `/pipeline`, `/graph`.
 
 ## Testing and deploy
 

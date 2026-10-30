@@ -87,6 +87,19 @@
   }
 }
 
+@keyframes graph-path-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.graph-path-edge {
+  animation: graph-path-fade 0.45s ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

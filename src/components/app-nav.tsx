@@ -12,6 +12,7 @@ export const APP_NAV_LINKS = [
   { href: "/outreach", label: "Outreach" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/pipeline", label: "Pipeline" },
+  { href: "/graph", label: "Graph" },
 ] as const;
 
 export function isAppNavActive(pathname: string, href: string): boolean {

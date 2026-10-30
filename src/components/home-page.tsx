@@ -31,7 +31,7 @@ export function HomePage() {
 
           <ul className="mt-8 grid gap-4 sm:grid-cols-2">
             {PRODUCT_MODULES.map((productModule, index) => {
-              const href =
+                const href =
                 productModule.name === "Discovery"
                   ? "/prospects"
                   : productModule.name === "Intake & ICP"
@@ -40,7 +40,9 @@ export function HomePage() {
                       ? "/dashboard"
                     : productModule.name === "Enrichment & Outreach"
                       ? "/outreach"
-                      : undefined;
+                      : productModule.name === "Knowledge Graph"
+                        ? "/graph"
+                        : undefined;
               return (
                 <li
                   key={productModule.name}

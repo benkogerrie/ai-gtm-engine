@@ -20,7 +20,9 @@ export function proxy(request: NextRequest) {
     pathname === "/dashboard" ||
     pathname.startsWith("/dashboard/") ||
     pathname === "/pipeline" ||
-    pathname.startsWith("/pipeline/");
+    pathname.startsWith("/pipeline/") ||
+    pathname === "/graph" ||
+    pathname.startsWith("/graph/");
   if (!needsAuth || isPublicDemoMode()) {
     return NextResponse.next();
   }
@@ -50,5 +52,7 @@ export const config = {
     "/dashboard/:path*",
     "/pipeline",
     "/pipeline/:path*",
+    "/graph",
+    "/graph/:path*",
   ],
 };

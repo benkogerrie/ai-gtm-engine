@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
     "/intake": ["./drizzle/**/*"],
     "/icp/[id]": ["./drizzle/**/*"],
     "/login": ["./drizzle/**/*"],
+    "/graph": ["./drizzle/**/*"],
   },
   outputFileTracingExcludes: {
     "*": ["./design/**"],

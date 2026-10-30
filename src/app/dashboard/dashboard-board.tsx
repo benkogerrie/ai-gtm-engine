@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { DraftOutreachButton } from "@/components/draft-outreach-button";
+import { ViewInGraphLink } from "@/components/view-in-graph-link";
 import { EvidenceLabelBadge, EvidenceRelevanceBadge } from "@/components/evidence-label";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -157,13 +158,18 @@ function PipelineCard({
           <EvidenceRelevanceBadge relevance={card.evidenceRelevance} />
         ) : null}
       </p>
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className="mt-2 flex flex-wrap items-center gap-2">
         <DraftOutreachButton companyId={card.companyId} />
         {card.outreachId ? (
           <Button asChild variant="outline" size="sm">
             <Link href={`/outreach/${card.outreachId}`}>Open draft</Link>
           </Button>
         ) : null}
+        <ViewInGraphLink
+          icpId={icpId}
+          runId={runId}
+          prospectId={card.companyId}
+        />
       </div>
       <MoveForm card={card} icpId={icpId} runId={runId} />
     </div>
