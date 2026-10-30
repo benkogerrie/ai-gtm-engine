@@ -17,7 +17,9 @@ export function proxy(request: NextRequest) {
     pathname === "/outreach" ||
     pathname.startsWith("/outreach/") ||
     pathname === "/dashboard" ||
-    pathname.startsWith("/dashboard/");
+    pathname.startsWith("/dashboard/") ||
+    pathname === "/pipeline" ||
+    pathname.startsWith("/pipeline/");
   if (!needsAuth) {
     return NextResponse.next();
   }
@@ -45,5 +47,7 @@ export const config = {
     "/outreach/:path*",
     "/dashboard",
     "/dashboard/:path*",
+    "/pipeline",
+    "/pipeline/:path*",
   ],
 };

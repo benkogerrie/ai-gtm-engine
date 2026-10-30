@@ -11,6 +11,13 @@ describe("isAppNavActive", () => {
     expect(isAppNavActive("/intake", "/dashboard")).toBe(false);
     expect(isAppNavActive("/icp", "/dashboard")).toBe(false);
     expect(isAppNavActive("/", "/dashboard")).toBe(false);
+    expect(isAppNavActive("/pipeline", "/dashboard")).toBe(false);
+  });
+
+  it("highlights Pipeline on /pipeline and nested pipeline paths", () => {
+    expect(isAppNavActive("/pipeline", "/pipeline")).toBe(true);
+    expect(isAppNavActive("/pipeline/extra", "/pipeline")).toBe(true);
+    expect(isAppNavActive("/dashboard", "/pipeline")).toBe(false);
   });
 
   it("keeps sibling flow tabs isolated", () => {
