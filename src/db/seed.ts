@@ -218,9 +218,10 @@ export async function seedExampleData() {
       entityId: company.id,
       fieldName: "name",
       fieldValue: company.name,
-      verificationStatus: "VERIFIED",
+      verificationStatus: "UNVERIFIED",
       assertedBy: "agent",
       citationIds: [citation.id],
+      // EXAMPLE .example URL: sourceUrl+retrievedAt is necessary but not sufficient for VERIFIED.
     },
     actor,
   );

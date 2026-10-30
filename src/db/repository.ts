@@ -30,7 +30,10 @@ import {
   createRelationshipEdgeInputSchema,
   type CreateRelationshipEdgeInput,
 } from "../domain/relationship";
+import { DomainError } from "../domain/errors";
 import {
+  assertDryRunCannotBeSent,
+  assertDryRunCompleted,
   assertOutreachTransition,
   assertSentHasApproval,
   assertVerifiedClaimHasCitation,
@@ -265,9 +268,16 @@ const COMPANY_EVIDENCE_FIELDS = [
   "intentScore",
 ] as const;
 
-export async function getCompanyWithEvidence(db: AppDatabase, id: string) {
+export async function getCompanyWithEvidence(
+  db: AppDatabase,
+  id: string,
+  orgId?: string,
+) {
   const company = await getCompany(db, id);
   if (!company) {
+    return null;
+  }
+  if (orgId && company.orgId !== orgId) {
     return null;
   }
 
@@ -482,8 +492,15 @@ export async function createOutreach(
     ...input,
   };
 
-  if (row.status === "SENT") {
-    assertSentHasApproval({ status: "SENT", approval: null });
+  assertDryRunCannotBeSent({ status: row.status, dryRun: row.dryRun });
+  assertDryRunCompleted({ status: row.status, dryRun: row.dryRun });
+  if (row.status === "SENT" || row.status === "DRY_RUN_COMPLETED") {
+    assertSentHasApproval({
+      status: "SENT",
+      outreachId: row.id,
+      orgId: row.orgId,
+      approval: null,
+    });
   }
 
   return withAudit(
@@ -586,18 +603,26 @@ export async function transitionOutreach(
   }
 
   assertOutreachTransition(current.status, input.status);
+  assertDryRunCannotBeSent({ status: input.status, dryRun: current.dryRun });
+  assertDryRunCompleted({ status: input.status, dryRun: current.dryRun });
 
   const approval = await getLatestOutreachApproval(db, current.id);
-  assertSentHasApproval({
-    status: input.status,
-    approval: approval
-      ? {
-          approvedBy: approval.approvedBy,
-          approvedAt: approval.approvedAt,
-          decision: approval.decision,
-        }
-      : null,
-  });
+  if (input.status === "SENT" || input.status === "DRY_RUN_COMPLETED") {
+    assertSentHasApproval({
+      status: "SENT",
+      outreachId: current.id,
+      orgId: current.orgId,
+      approval: approval
+        ? {
+            outreachId: approval.outreachId,
+            orgId: approval.orgId,
+            approvedBy: approval.approvedBy,
+            approvedAt: approval.approvedAt,
+            decision: approval.decision,
+          }
+        : null,
+    });
+  }
 
   const stamped = now();
   const next = {
@@ -665,6 +690,35 @@ export async function getCitation(db: AppDatabase, id: string) {
   return row ?? null;
 }
 
+const ENTITY_ORG_TABLES = {
+  organization: organizations,
+  product: products,
+  icp: icps,
+  company: companies,
+  person: people,
+  competitor: competitors,
+  signal: signals,
+  lead: leads,
+  outreach,
+  outreach_approval: outreachApprovals,
+  citation: citations,
+  field_assertion: fieldAssertions,
+  relationship_edge: relationshipEdges,
+} as const;
+
+export async function getEntityOrgId(
+  db: AppDatabase,
+  entityType: EntityType,
+  entityId: string,
+): Promise<string | null> {
+  const table = ENTITY_ORG_TABLES[entityType];
+  const [row] = await db
+    .select({ orgId: table.orgId })
+    .from(table)
+    .where(eq(table.id, entityId));
+  return row?.orgId ?? null;
+}
+
 export async function createFieldAssertion(
   db: AppDatabase,
   raw: CreateFieldAssertionInput,
@@ -677,6 +731,33 @@ export async function createFieldAssertion(
         .from(citations)
         .where(inArray(citations.id, input.citationIds))
     : [];
+
+  if (linkedCitations.length !== input.citationIds.length) {
+    throw new DomainError(
+      "CITATION_NOT_FOUND",
+      "One or more citation IDs are missing",
+    );
+  }
+  if (linkedCitations.some((citation) => citation.orgId !== input.orgId)) {
+    throw new DomainError(
+      "CITATION_ORG_MISMATCH",
+      "Citations must belong to the same org as the assertion",
+    );
+  }
+
+  const targetOrgId = await getEntityOrgId(db, input.entityType, input.entityId);
+  if (!targetOrgId) {
+    throw new DomainError(
+      "ENTITY_NOT_FOUND",
+      "Target entity for the field assertion was not found",
+    );
+  }
+  if (targetOrgId !== input.orgId) {
+    throw new DomainError(
+      "ENTITY_ORG_MISMATCH",
+      "Target entity must belong to the same org as the assertion",
+    );
+  }
 
   assertVerifiedClaimHasCitation({
     verificationStatus: input.verificationStatus,

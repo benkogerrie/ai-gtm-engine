@@ -256,6 +256,7 @@ describe("repository", () => {
         channel: "EMAIL",
         body: "EXAMPLE body",
         status: "APPROVED",
+        dryRun: false,
       },
       actor,
     );
@@ -272,7 +273,12 @@ describe("repository", () => {
   it("allows SENT after a HITL approval record exists", async () => {
     const drafted = await createOutreach(
       handle.db,
-      { orgId, channel: "LINKEDIN", body: "EXAMPLE body" },
+      {
+        orgId,
+        channel: "LINKEDIN",
+        body: "EXAMPLE body",
+        dryRun: false,
+      },
       actor,
     );
     await transitionOutreach(
@@ -296,5 +302,169 @@ describe("repository", () => {
     );
     expect(sent.status).toBe("SENT");
     expect(sent.sentAt).toBeTruthy();
+  });
+
+  it("rejects recording a dry-run outreach as SENT", async () => {
+    const drafted = await createOutreach(
+      handle.db,
+      { orgId, channel: "EMAIL", body: "EXAMPLE dry run", dryRun: true },
+      actor,
+    );
+    await transitionOutreach(
+      handle.db,
+      { outreachId: drafted.id, status: "PENDING_APPROVAL" },
+      actor,
+    );
+    await approveOutreach(
+      handle.db,
+      {
+        outreachId: drafted.id,
+        approvedBy: "example-rep",
+        decision: "APPROVED",
+      },
+      { actorType: "human", actorId: "example-rep" },
+    );
+    await expect(
+      transitionOutreach(
+        handle.db,
+        { outreachId: drafted.id, status: "SENT" },
+        actor,
+      ),
+    ).rejects.toMatchObject({ code: "DRY_RUN_CANNOT_BE_SENT" });
+  });
+
+  it("records an approved dry-run as DRY_RUN_COMPLETED without sentAt", async () => {
+    const drafted = await createOutreach(
+      handle.db,
+      { orgId, channel: "EMAIL", body: "EXAMPLE dry run", dryRun: true },
+      actor,
+    );
+    await transitionOutreach(
+      handle.db,
+      { outreachId: drafted.id, status: "PENDING_APPROVAL" },
+      actor,
+    );
+    await approveOutreach(
+      handle.db,
+      {
+        outreachId: drafted.id,
+        approvedBy: "example-rep",
+        decision: "APPROVED",
+      },
+      { actorType: "human", actorId: "example-rep" },
+    );
+    const completed = await transitionOutreach(
+      handle.db,
+      { outreachId: drafted.id, status: "DRY_RUN_COMPLETED" },
+      actor,
+    );
+    expect(completed.status).toBe("DRY_RUN_COMPLETED");
+    expect(completed.sentAt).toBeNull();
+  });
+
+  it("rejects a field assertion that links a missing citation id", async () => {
+    const company = await createCompany(
+      handle.db,
+      { orgId, name: "EXAMPLE Missing Cite Co" },
+      actor,
+    );
+    await expect(
+      createFieldAssertion(
+        handle.db,
+        {
+          orgId,
+          entityType: "company",
+          entityId: company.id,
+          fieldName: "name",
+          fieldValue: company.name,
+          verificationStatus: "UNVERIFIED",
+          assertedBy: "agent",
+          citationIds: ["99999999-9999-4999-8999-999999999999"],
+        },
+        actor,
+      ),
+    ).rejects.toMatchObject({ code: "CITATION_NOT_FOUND" });
+  });
+
+  it("rejects a field assertion that links a citation from another org", async () => {
+    const other = await createOrganization(
+      handle.db,
+      { name: "EXAMPLE Other Org" },
+      actor,
+    );
+    const company = await createCompany(
+      handle.db,
+      { orgId, name: "EXAMPLE Home Co" },
+      actor,
+    );
+    const foreignCitation = await createCitation(
+      handle.db,
+      {
+        orgId: other.orgId,
+        sourceUrl: "https://other.example/about",
+        retrievedAt: new Date("2026-10-01T00:00:00.000Z"),
+        sourceType: "WEBSITE",
+        quote: "EXAMPLE foreign quote",
+        extractor: "agent",
+      },
+      actor,
+    );
+    await expect(
+      createFieldAssertion(
+        handle.db,
+        {
+          orgId,
+          entityType: "company",
+          entityId: company.id,
+          fieldName: "name",
+          fieldValue: company.name,
+          verificationStatus: "UNVERIFIED",
+          assertedBy: "agent",
+          citationIds: [foreignCitation.id],
+        },
+        actor,
+      ),
+    ).rejects.toMatchObject({ code: "CITATION_ORG_MISMATCH" });
+  });
+
+  it("rejects a field assertion whose target entity is in another org", async () => {
+    const other = await createOrganization(
+      handle.db,
+      { name: "EXAMPLE Target Org" },
+      actor,
+    );
+    const foreignCompany = await createCompany(
+      handle.db,
+      { orgId: other.orgId, name: "EXAMPLE Foreign Target" },
+      actor,
+    );
+    const citation = await createCitation(
+      handle.db,
+      {
+        orgId,
+        sourceUrl: "https://home.example/about",
+        retrievedAt: new Date("2026-10-01T00:00:00.000Z"),
+        sourceType: "WEBSITE",
+        quote: "EXAMPLE home quote",
+        extractor: "agent",
+      },
+      actor,
+    );
+    await expect(
+      createFieldAssertion(
+        handle.db,
+        {
+          orgId,
+          entityType: "company",
+          entityId: foreignCompany.id,
+          fieldName: "name",
+          fieldValue: foreignCompany.name,
+          verificationStatus: "UNVERIFIED",
+          assertedBy: "agent",
+          citationIds: [citation.id],
+        },
+        actor,
+      ),
+    ).rejects.toMatchObject({ code: "ENTITY_ORG_MISMATCH" });
   });
 });

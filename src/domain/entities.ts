@@ -237,7 +237,7 @@ export const createOutreachInputSchema = outreachSchema
   });
 export type CreateOutreachInput = z.input<typeof createOutreachInputSchema>;
 
-export const listQuerySchema = z.object({
-  orgId: uuidSchema,
+export const createProductApiSchema = createProductInputSchema.omit({
+  orgId: true,
 });
-export type ListQuery = z.infer<typeof listQuerySchema>;
+export type CreateProductApiInput = z.input<typeof createProductApiSchema>;

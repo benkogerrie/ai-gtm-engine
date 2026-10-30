@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { isDomainError } from "@/domain/errors";
-import { actorTypeSchema, type MutationActor } from "@/domain";
+import { getAuthContext, type AuthContext } from "@/lib/auth";
 
 export function jsonError(
   status: number,
@@ -48,14 +48,14 @@ export function parseSearchParams<T>(
   return { ok: true, data: parsed.data };
 }
 
-export function actorFromHeaders(request: Request): MutationActor {
-  const actorType = actorTypeSchema.safeParse(
-    request.headers.get("x-actor-type") ?? "agent",
-  );
-  return {
-    actorType: actorType.success ? actorType.data : "agent",
-    actorId: request.headers.get("x-actor-id") ?? "api",
-  };
+export function requireAuth(
+  request: Request,
+): { ok: true; auth: AuthContext } | { ok: false; response: Response } {
+  const auth = getAuthContext(request);
+  if (!auth) {
+    return { ok: false, response: jsonError(401, "Unauthorized") };
+  }
+  return { ok: true, auth };
 }
 
 export function handleRouteError(error: unknown): Response {

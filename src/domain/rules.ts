@@ -24,7 +24,7 @@ export function assertVerifiedClaimHasCitation(input: {
   if (!hasSupportingCitation) {
     throw new DomainError(
       "VERIFIED_WITHOUT_CITATION",
-      "A VERIFIED claim requires at least one citation with sourceUrl and retrievedAt. Unknown is UNVERIFIED, never fabricated.",
+      "A VERIFIED claim requires at least one citation with sourceUrl and retrievedAt. Unknown is UNVERIFIED, never fabricated. A URL and timestamp are necessary but do not by themselves prove the claim is true.",
     );
   }
 }
@@ -32,8 +32,9 @@ export function assertVerifiedClaimHasCitation(input: {
 const OUTREACH_TRANSITIONS: Record<OutreachStatus, readonly OutreachStatus[]> = {
   DRAFT: ["PENDING_APPROVAL", "REJECTED"],
   PENDING_APPROVAL: ["APPROVED", "REJECTED"],
-  APPROVED: ["SENT", "REJECTED"],
+  APPROVED: ["SENT", "DRY_RUN_COMPLETED", "REJECTED"],
   SENT: [],
+  DRY_RUN_COMPLETED: [],
   REJECTED: [],
 };
 
@@ -54,6 +55,8 @@ export function assertOutreachTransition(
 }
 
 export type ApprovalRecord = {
+  outreachId?: string | null;
+  orgId?: string | null;
   approvedBy?: string | null;
   approvedAt?: Date | string | null;
   decision?: "APPROVED" | "REJECTED" | null;
@@ -61,6 +64,8 @@ export type ApprovalRecord = {
 
 export function assertSentHasApproval(input: {
   status: OutreachStatus;
+  outreachId: string;
+  orgId: string;
   approval?: ApprovalRecord | null;
 }): void {
   if (input.status !== "SENT") {
@@ -69,14 +74,43 @@ export function assertSentHasApproval(input: {
 
   const approval = input.approval;
   const approved =
-    Boolean(approval?.approvedBy) &&
-    Boolean(approval?.approvedAt) &&
-    (approval?.decision === undefined || approval.decision === "APPROVED");
+    approval?.decision === "APPROVED" &&
+    Boolean(approval.approvedBy) &&
+    Boolean(approval.approvedAt) &&
+    approval.outreachId === input.outreachId &&
+    approval.orgId === input.orgId;
 
   if (!approved) {
     throw new DomainError(
       "SENT_WITHOUT_APPROVAL",
-      "Outreach status SENT requires an approval record with approvedBy and approvedAt",
+      "Outreach status SENT requires an approval record for the same outreach and org with decision APPROVED, approvedBy, and approvedAt",
+    );
+  }
+}
+
+export function assertDryRunCannotBeSent(input: {
+  status: OutreachStatus;
+  dryRun: boolean;
+}): void {
+  if (input.status === "SENT" && input.dryRun) {
+    throw new DomainError(
+      "DRY_RUN_CANNOT_BE_SENT",
+      "Dry-run outreach cannot be recorded as SENT; use DRY_RUN_COMPLETED and leave sentAt empty",
+    );
+  }
+}
+
+export function assertDryRunCompleted(input: {
+  status: OutreachStatus;
+  dryRun: boolean;
+}): void {
+  if (input.status !== "DRY_RUN_COMPLETED") {
+    return;
+  }
+  if (!input.dryRun) {
+    throw new DomainError(
+      "INVALID_STATUS_TRANSITION",
+      "DRY_RUN_COMPLETED is only valid when dryRun is true",
     );
   }
 }

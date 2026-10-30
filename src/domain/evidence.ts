@@ -24,6 +24,11 @@ export const createCitationInputSchema = citationSchema
   });
 export type CreateCitationInput = z.input<typeof createCitationInputSchema>;
 
+export const createCitationApiSchema = createCitationInputSchema.omit({
+  orgId: true,
+});
+export type CreateCitationApiInput = z.input<typeof createCitationApiSchema>;
+
 export const fieldAssertionSchema = entityBaseSchema.extend({
   entityType: entityTypeSchema,
   entityId: uuidSchema,

@@ -16,7 +16,7 @@ Every row has `id`, `orgId` (multi-tenant ready), `createdAt`, and `updatedAt`.
 | Competitor | DIRECT / INDIRECT / ALTERNATIVE landscape row. |
 | Signal | Buying or negative telemetry (hire, funding, freeze, …). |
 | Lead | Pipeline card. Stages: MATCHED → CONTACTED → REPLIED → MEETING_BOOKED → CLOSED_LOST. |
-| Outreach | Drafted message. Status: DRAFT → PENDING_APPROVAL → APPROVED → SENT / REJECTED. `dryRun` defaults to `true`. |
+| Outreach | Drafted message. Status: DRAFT → PENDING_APPROVAL → APPROVED → SENT / DRY_RUN_COMPLETED / REJECTED. `dryRun` defaults to `true`. Dry-run is never `SENT`. |
 | OutreachApproval | HITL record (`approvedBy`, `approvedAt`, decision). |
 | Citation | Evidence ledger row (source URL, retrieved-at, quote, hash, extractor). |
 | FieldAssertion | Claim that a specific entity field has a value, with verification status. |
@@ -121,20 +121,22 @@ erDiagram
 
 1. **Unknown ≠ verified.** A field without an assertion is returned as `UNVERIFIED` with an empty citation list. Missing values stay `null`; the engine must not invent a value and mark it verified.
 2. **A claim cannot be `VERIFIED` without evidence.** `createFieldAssertion` rejects `VERIFIED` unless at least one linked citation has both `sourceUrl` and `retrievedAt`. Enforced in `src/domain/rules.ts` and covered by tests.
-3. **Citations are first-class.** Each citation stores `sourceUrl`, `retrievedAt`, `sourceType`, a quote/snippet, a SHA-256 `contentHash`, and `extractor` (`agent` | `human`).
-4. **INFERRED** is allowed without a URL (model guess). It is not treated as verified.
+3. **A URL + `retrievedAt` is necessary but not sufficient.** Those fields prove a source was recorded, not that the claim is true. `VERIFIED` is reserved for a real retrieved source that a reviewer or trusted extractor has accepted. Fictional or EXAMPLE `.example` URLs stay `UNVERIFIED`.
+4. **Citations are first-class.** Each citation stores `sourceUrl`, `retrievedAt`, `sourceType`, a quote/snippet, a SHA-256 `contentHash`, and `extractor` (`agent` | `human`). Citations and the target entity must belong to the same org as the assertion.
+5. **INFERRED** is allowed without a URL (model guess). It is not treated as verified.
 
 `GET /api/companies/:id` returns both the raw company row and a `fields` map of `{ value, verificationStatus, citations }`.
 
 ## HITL and outreach
 
 - Default create path: `DRAFT` + `dryRun: true`.
-- Legal transitions: `DRAFT → PENDING_APPROVAL | REJECTED`, `PENDING_APPROVAL → APPROVED | REJECTED`, `APPROVED → SENT | REJECTED`. Terminal: `SENT`, `REJECTED`.
-- `SENT` requires an `outreach_approvals` row with `approvedBy` and `approvedAt` (and decision `APPROVED`). The repository refuses `SENT` without that record.
+- Legal transitions: `DRAFT → PENDING_APPROVAL | REJECTED`, `PENDING_APPROVAL → APPROVED | REJECTED`, `APPROVED → SENT | DRY_RUN_COMPLETED | REJECTED`. Terminal: `SENT`, `DRY_RUN_COMPLETED`, `REJECTED`.
+- `SENT` requires an `outreach_approvals` row for the **same outreach and org** with explicit decision `APPROVED`, `approvedBy`, and `approvedAt`. Undefined, `REJECTED`, another outreach, or another org all fail.
+- A dry-run is never recorded as `SENT`. After approval it becomes `DRY_RUN_COMPLETED` and `sentAt` stays empty. Only a real (non-dry-run) send sets `sentAt`.
 
 ## Audit
 
-`withAudit` wraps every repository mutation in a transaction and appends an `audit_events` row: actor type (`human` | `agent`), `actorId`, action, entity type/id, `before` / `after` JSON, timestamp. The table is append-only (no update/delete helpers).
+`withAudit` wraps every repository mutation in a transaction and appends an `audit_events` row: actor type (`human` | `agent`), `actorId`, action, entity type/id, `before` / `after` JSON, timestamp. The table is append-only at the database level: a Postgres trigger raises on `UPDATE` or `DELETE` (works in PGlite too).
 
 ## Persistence
 
@@ -148,14 +150,13 @@ erDiagram
 
 | Method | Path | Contract |
 | --- | --- | --- |
-| GET/POST | `/api/products` | Zod `listQuerySchema` / `createProductInputSchema` |
-| GET | `/api/companies/[id]` | Company + field evidence |
-| POST | `/api/citations` | `createCitationInputSchema` |
-| GET | `/api/audit` | `auditListQuerySchema` |
+| GET/POST | `/api/products` | Auth required. Zod `createProductApiSchema` (no client `orgId`) |
+| GET | `/api/companies/[id]` | Auth required. Company + field evidence for the server org only |
+| POST | `/api/citations` | Auth required. Zod `createCitationApiSchema` |
+| GET | `/api/audit` | Auth required. `auditListQuerySchema` (no client `orgId`) |
+| GET | `/api/health` | Public |
 
-Invalid bodies or query strings return **400**. Domain-rule violations also return 400 with `{ code }`.
-
-Optional headers: `x-actor-type` (`human` \| `agent`), `x-actor-id`.
+Data endpoints return **401** unless `getAuthContext` succeeds. Org and actor come only from server env (`APP_API_TOKEN` → `APP_ORG_ID` / `APP_ACTOR_*`). Query, body, and `x-actor-*` headers are ignored. Invalid bodies return **400**. Domain-rule violations return 400 with `{ code }`.
 
 ## Graph note
 

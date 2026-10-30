@@ -1,27 +1,31 @@
-import { createProductInputSchema, listQuerySchema } from "@/domain";
+import { createProductApiSchema } from "@/domain";
 import { getDb } from "@/db/client";
 import { createProduct, listProducts } from "@/db/repository";
 import {
-  actorFromHeaders,
   handleRouteError,
   parseJson,
-  parseSearchParams,
+  requireAuth,
   toJsonSafe,
 } from "@/lib/http";
 
 export async function GET(request: Request) {
-  const query = parseSearchParams(request, listQuerySchema);
-  if (!query.ok) {
-    return query.response;
+  const auth = requireAuth(request);
+  if (!auth.ok) {
+    return auth.response;
   }
 
   const db = await getDb();
-  const rows = await listProducts(db, query.data.orgId);
+  const rows = await listProducts(db, auth.auth.orgId);
   return Response.json(toJsonSafe(rows));
 }
 
 export async function POST(request: Request) {
-  const parsed = await parseJson(request, createProductInputSchema);
+  const auth = requireAuth(request);
+  if (!auth.ok) {
+    return auth.response;
+  }
+
+  const parsed = await parseJson(request, createProductApiSchema);
   if (!parsed.ok) {
     return parsed.response;
   }
@@ -30,8 +34,8 @@ export async function POST(request: Request) {
     const db = await getDb();
     const created = await createProduct(
       db,
-      parsed.data,
-      actorFromHeaders(request),
+      { ...parsed.data, orgId: auth.auth.orgId },
+      auth.auth.actor,
     );
     return Response.json(toJsonSafe(created), { status: 201 });
   } catch (error) {

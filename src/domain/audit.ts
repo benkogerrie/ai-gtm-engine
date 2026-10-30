@@ -14,7 +14,6 @@ export const auditEventSchema = entityBaseSchema.extend({
 export type AuditEvent = z.infer<typeof auditEventSchema>;
 
 export const auditListQuerySchema = z.object({
-  orgId: uuidSchema,
   entityType: entityTypeSchema.optional(),
   entityId: uuidSchema.optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),

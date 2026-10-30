@@ -53,6 +53,7 @@ export const OUTREACH_STATUSES = [
   "PENDING_APPROVAL",
   "APPROVED",
   "SENT",
+  "DRY_RUN_COMPLETED",
   "REJECTED",
 ] as const;
 export const outreachStatusSchema = z.enum(OUTREACH_STATUSES);

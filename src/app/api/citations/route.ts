@@ -1,15 +1,20 @@
-import { createCitationInputSchema } from "@/domain";
+import { createCitationApiSchema } from "@/domain";
 import { getDb } from "@/db/client";
 import { createCitation } from "@/db/repository";
 import {
-  actorFromHeaders,
   handleRouteError,
   parseJson,
+  requireAuth,
   toJsonSafe,
 } from "@/lib/http";
 
 export async function POST(request: Request) {
-  const parsed = await parseJson(request, createCitationInputSchema);
+  const auth = requireAuth(request);
+  if (!auth.ok) {
+    return auth.response;
+  }
+
+  const parsed = await parseJson(request, createCitationApiSchema);
   if (!parsed.ok) {
     return parsed.response;
   }
@@ -18,8 +23,8 @@ export async function POST(request: Request) {
     const db = await getDb();
     const created = await createCitation(
       db,
-      parsed.data,
-      actorFromHeaders(request),
+      { ...parsed.data, orgId: auth.auth.orgId },
+      auth.auth.actor,
     );
     return Response.json(toJsonSafe(created), { status: 201 });
   } catch (error) {
