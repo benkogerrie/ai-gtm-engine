@@ -4,6 +4,10 @@ import { closeSingleton, setDatabaseHandle } from "@/db/client";
 import { createOrganization } from "@/db/repository";
 import { createTestDatabase } from "@/db/test-utils";
 import {
+  DEMO_DAILY_LIMIT_MESSAGE,
+  resetDemoRateLimitStore,
+} from "@/lib/demo-rate-limit";
+import {
   TEST_AUTH,
   authHeaders,
   clearTestAuth,
@@ -26,6 +30,7 @@ describe("POST /api/discovery/runs", () => {
   });
 
   afterEach(async () => {
+    resetDemoRateLimitStore();
     clearTestAuth();
     await closeSingleton();
   });
@@ -56,6 +61,51 @@ describe("POST /api/discovery/runs", () => {
       }),
     );
     expect(response.status).toBe(401);
+  });
+
+  it("bypasses the bearer token in public demo mode", async () => {
+    process.env.PUBLIC_DEMO_MODE = "true";
+    const response = await POST(
+      new Request("http://localhost/api/discovery/runs", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-org-id": "22222222-2222-4222-8222-222222222222",
+        },
+        body: JSON.stringify({
+          productSummary: "HRIS",
+          industries: ["HRIS"],
+        }),
+      }),
+    );
+    expect(response.status).toBe(201);
+  });
+
+  it("returns 429 with the existing friendly error when the demo daily cap is hit", async () => {
+    process.env.PUBLIC_DEMO_MODE = "true";
+    process.env.DEMO_MAX_RUNS_PER_DAY = "1";
+    const body = {
+      productSummary: "HRIS",
+      industries: ["HRIS"],
+    };
+    const first = await POST(
+      new Request("http://localhost/api/discovery/runs", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+    );
+    expect(first.status).toBe(201);
+    const limited = await POST(
+      new Request("http://localhost/api/discovery/runs", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+    );
+    expect(limited.status).toBe(429);
+    const json = (await limited.json()) as { error: string };
+    expect(json.error).toBe(DEMO_DAILY_LIMIT_MESSAGE);
   });
 
   it("creates a labeled MOCK run when search is synthetic", async () => {

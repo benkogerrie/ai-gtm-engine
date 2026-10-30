@@ -70,6 +70,37 @@ describe("getAuthContext", () => {
     });
   });
 
+  it("bypasses the bearer token in public demo mode and keeps the server org", () => {
+    process.env.PUBLIC_DEMO_MODE = "true";
+    process.env.APP_ORG_ID = TEST_AUTH.orgId;
+    process.env.APP_ACTOR_ID = TEST_AUTH.actorId;
+    const ctx = getAuthContext(
+      request({
+        "x-org-id": "22222222-2222-4222-8222-222222222222",
+        "x-actor-id": "spoofed",
+      }),
+    );
+    expect(ctx?.orgId).toBe(TEST_AUTH.orgId);
+    expect(ctx?.actor).toEqual({
+      actorType: "human",
+      actorId: TEST_AUTH.actorId,
+    });
+  });
+
+  it("still requires a token when public demo mode is off", () => {
+    installTestAuth();
+    process.env.PUBLIC_DEMO_MODE = "false";
+    process.env.VERCEL_ENV = "preview";
+    expect(getAuthContext(request({}))).toBeNull();
+    expect(
+      getAuthContext(request({ authorization: "Bearer wrong-token" })),
+    ).toBeNull();
+    const ctx = getAuthContext(
+      request({ authorization: `Bearer ${TEST_AUTH.token}` }),
+    );
+    expect(ctx?.orgId).toBe(TEST_AUTH.orgId);
+  });
+
   it("ignores spoofed org and actor headers", () => {
     installTestAuth();
     const ctx = getAuthContext(

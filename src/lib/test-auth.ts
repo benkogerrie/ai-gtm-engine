@@ -13,6 +13,7 @@ export function installTestAuth(
   process.env.APP_ORG_ID = cfg.orgId;
   process.env.APP_ACTOR_ID = cfg.actorId;
   process.env.APP_ACTOR_TYPE = cfg.actorType;
+  process.env.PUBLIC_DEMO_MODE = "false";
   return cfg;
 }
 
@@ -21,6 +22,10 @@ export function clearTestAuth(): void {
   delete process.env.APP_ORG_ID;
   delete process.env.APP_ACTOR_ID;
   delete process.env.APP_ACTOR_TYPE;
+  delete process.env.PUBLIC_DEMO_MODE;
+  delete process.env.DEMO_MAX_RUNS_PER_DAY;
+  delete process.env.DEMO_MAX_PER_IP_PER_HOUR;
+  delete process.env.VERCEL_ENV;
 }
 
 export function authHeaders(token = TEST_AUTH.token): HeadersInit {

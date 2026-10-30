@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { actorTypeSchema, uuidSchema, type MutationActor } from "@/domain";
+import { readDemoAuth } from "@/lib/demo-mode";
 
 export type AuthContext = {
   orgId: string;
@@ -122,9 +123,14 @@ export function authFromSessionCookie(
  * Derives org + actor only from server-side env (APP_API_TOKEN → APP_ORG_ID /
  * APP_ACTOR_*). Caller orgId, x-actor-id, x-actor-type, and query/body values
  * are ignored. A signed session cookie is accepted for browser pages; the
- * cookie never carries orgId.
+ * cookie never carries orgId. Public demo mode maps to the same server org
+ * without a token or cookie.
  */
 export function getAuthContext(request: Request): AuthContext | null {
+  const demo = readDemoAuth();
+  if (demo) {
+    return demo;
+  }
   const configured = readConfiguredSecret();
   if (!configured) {
     return null;

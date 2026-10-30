@@ -34,7 +34,9 @@ Open [http://localhost:3000](http://localhost:3000). Health check: [http://local
 
 `.env.example` lists empty placeholders. `DATABASE_URL=` is intentionally blank so local/dev/test use in-process [PGlite](https://pglite.dev) (no Docker, no secrets). Set `DATABASE_URL` later for a real Postgres (for example on Vercel). Optional `PGLITE_DATA_DIR` overrides the default `.pglite/` data directory used by `pnpm db:migrate`.
 
-Data APIs (`/api/products`, `/api/companies/*`, `/api/citations`, `/api/audit`, `/api/discovery/runs`) require `Authorization: Bearer $APP_API_TOKEN`. Org and actor are mapped server-side from `APP_ORG_ID` / `APP_ACTOR_ID` / `APP_ACTOR_TYPE` — never from the request. Leave those placeholders empty in the repo. `/api/health` stays public.
+Data APIs (`/api/products`, `/api/companies/*`, `/api/citations`, `/api/audit`, `/api/discovery/runs`) require `Authorization: Bearer $APP_API_TOKEN` unless public demo mode is on. Org and actor are mapped server-side from `APP_ORG_ID` / `APP_ACTOR_ID` / `APP_ACTOR_TYPE` — never from the request. Leave those placeholders empty in the repo. `/api/health` stays public.
+
+**Public demo:** set `PUBLIC_DEMO_MODE=true` to skip the token/login gate and map every request to the server org / demo actor. Unset defaults to **on** for Vercel Preview (`VERCEL_ENV=preview`) so judges can open `/intake` without a key. `PUBLIC_DEMO_MODE=false` keeps the existing token auth. Expensive actions (intake/ICP, discovery, outreach draft) are rate-limited (`DEMO_MAX_RUNS_PER_DAY`, default 60, plus ~10 per IP per hour). Outreach stays dry-run only.
 
 Do not put real secrets in the repository.
 

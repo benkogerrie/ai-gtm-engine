@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { getDb } from "@/db/client";
+import { demoRequestRateLimit } from "@/lib/demo-rate-limit";
 import {
   handleRouteError,
   jsonError,
@@ -62,6 +63,11 @@ export async function POST(request: Request) {
   const parsed = draftBodySchema.safeParse(body);
   if (!parsed.success) {
     return jsonError(400, "Invalid input", z.flattenError(parsed.error));
+  }
+
+  const limited = demoRequestRateLimit("outreach_draft", request);
+  if (limited) {
+    return jsonError(429, limited.error);
   }
 
   try {

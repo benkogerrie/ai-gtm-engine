@@ -7,6 +7,7 @@ import {
   safeEqual,
   signSessionValue,
 } from "@/lib/auth";
+import { isPublicDemoMode } from "@/lib/demo-mode";
 import { safeLoginRedirect } from "@/lib/login-redirect";
 import { SESSION_COOKIE, sessionCookieOptions } from "@/lib/session";
 
@@ -16,6 +17,11 @@ export async function loginAction(
   _prev: LoginState,
   formData: FormData,
 ): Promise<LoginState> {
+  const next = safeLoginRedirect(formData.get("next"));
+  if (isPublicDemoMode()) {
+    redirect(next);
+  }
+
   const configured = readConfiguredSecret();
   if (!configured) {
     return {
@@ -36,7 +42,7 @@ export async function loginAction(
     sessionCookieOptions(),
   );
 
-  redirect(safeLoginRedirect(formData.get("next")));
+  redirect(next);
 }
 
 export async function logoutAction(): Promise<void> {
