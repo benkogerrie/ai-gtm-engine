@@ -72,6 +72,7 @@ src/
     discovery/    Brave queries → cited prospects
     outreach/     citation-grounded drafts + HITL
     pipeline/     dashboard snapshot + stage derivation
+    site-intake/  website reader for /intake autofill (SSRF-safe fetch + DeepSeek)
 drizzle/          committed SQL migrations (0000–0002)
 docs/             this file and slice docs
 ```
@@ -121,6 +122,7 @@ Details: [llm.md](./llm.md), [search.md](./search.md).
 | B001 | `/`, `/api/health` | Standalone repo, CI, hello-world |
 | B002 | `/api/products`, `/api/companies/:id`, `/api/citations`, `/api/audit` | Domain model, evidence ledger, HITL outreach states |
 | B003 | `/login`, `/intake`, `/icp/[id]` | Product intake → DeepSeek ICP → human approve |
+| B015 | `/intake`, `POST /api/intake/site` | Read a public website and prefill intake fields |
 | B003a | `src/lib/llm` | DeepSeek provider |
 | B003b | `src/lib/login-redirect.ts` | Post-login `next` allowlist |
 | B004 | `/prospects`, `/api/discovery/runs` | Live Brave discovery, named orgs only, cited claims |
@@ -133,6 +135,8 @@ Not built on `main` yet: scoring/tiers as a standalone engine (B005), graph stor
 ### Intake and ICP
 
 `submitProductIntake` → `LlmClient.json` → shape-normalize → Zod. One repair retry. Invalid JSON is rejected. Fields stay `INFERRED` until a human clicks **Approve ICP**. Edits after approval create a new DRAFT version (`parentIcpId`). NAICS codes are checked against a committed 2022 list; unknown codes are flagged, not replaced. [icp-engine.md](./icp-engine.md).
+
+Optional **Read my site** on `/intake` calls `POST /api/intake/site`. The reader upgrades `http` → `https`, allows only public hosts (localhost, private, link-local, and reserved IPv4/IPv6 are blocked after DNS), follows at most 3 redirects with the same checks on each hop, fetches at most 3 same-origin pages (8s / 1.5 MB each), strips scripts and styles to text, and sends a capped excerpt to DeepSeek (`LlmClient.json`, nullable Zod fields, one repair). Missing `DEEPSEEK_API_KEY` uses `createMockLlmClient` and is labeled **MOCK**. Prefill never invents facts; empty fields stay empty and are marked *Nog invullen / Needs input* until the user types. The product schema has no website column, so the URL is stored as `Website: <url>` in free text.
 
 ### Discovery
 
@@ -170,6 +174,7 @@ Automatic board stages come **only** from recorded rows. `REJECTED` is a **separ
 | GET | `/api/companies/[id]` | required | Company + field evidence for the server org |
 | POST | `/api/citations` | required | |
 | GET | `/api/audit` | required | |
+| POST | `/api/intake/site` | required | Public https site reader; `maxDuration` 60s |
 | POST | `/api/discovery/runs` | required | `maxDuration` 60s |
 | GET | `/api/discovery/runs/[id]` | required | |
 | GET/POST | `/api/outreach` | required | |

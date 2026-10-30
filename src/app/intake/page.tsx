@@ -19,9 +19,10 @@ async function IntakeBody() {
     <AppShell eyebrow="B003 · Product intake" showLogout>
       <h1 className="font-serif text-4xl tracking-tight">Product intake</h1>
       <p className="mt-3 max-w-2xl text-muted-foreground">
-        Describe the product in structured fields or free text. The engine
-        infers a draft ICP with field-level confidence. Inferred fields stay
-        INFERRED until a human approves the profile.
+        Paste a website and click Read my site to prefill what the pages
+        support, or describe the product yourself. Review every field, then
+        submit. The engine infers a draft ICP with field-level confidence.
+        Inferred fields stay INFERRED until a human approves the profile.
       </p>
       <IntakeForm mockMode={!isLlmConfigured()} />
     </AppShell>
