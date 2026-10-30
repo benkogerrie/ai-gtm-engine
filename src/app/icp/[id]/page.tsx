@@ -56,7 +56,7 @@ export default async function IcpPage({
 }) {
   const { id } = await params;
   return (
-    <Suspense fallback={<p className="p-6 text-sm text-[var(--muted)]">Loading…</p>}>
+    <Suspense fallback={<p className="p-6 text-sm text-muted-foreground">Loading…</p>}>
       <IcpBody id={id} />
     </Suspense>
   );

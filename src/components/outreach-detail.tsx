@@ -4,6 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import type { OutreachView } from "@/lib/outreach";
 import { OUTREACH_CTAS, OUTREACH_TONES } from "@/lib/outreach";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
 
 export type OutreachDetailView = Omit<
   OutreachView,
@@ -16,14 +23,14 @@ export type OutreachDetailView = Omit<
 
 function StatusBadge({ status }: { status: string }) {
   return (
-    <span
-      data-testid="status-badge"
-      className="rounded-full border border-[var(--rule)] px-3 py-1 text-xs uppercase"
-    >
+    <Badge data-testid="status-badge" variant="outline">
       {status.replaceAll("_", " ")}
-    </span>
+    </Badge>
   );
 }
+
+const selectClass =
+  "mt-1 flex h-9 rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export function OutreachDetail({
   view,
@@ -77,7 +84,7 @@ export function OutreachDetail({
       {view.labeledTest ? (
         <p
           data-testid="mock-banner"
-          className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm"
+          className="rounded-md border border-accent bg-accent px-3 py-2 text-sm text-accent-foreground"
         >
           {view.inferenceMode === "mock" ? "MOCK output — " : ""}
           TEST / MOCK labeled demo. Not a real company, person, or send.
@@ -86,7 +93,7 @@ export function OutreachDetail({
 
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs tracking-[0.18em] text-[var(--muted)] uppercase">
+          <p className="text-xs text-muted-foreground uppercase">
             {view.companyName ?? "Company"} · v{view.version} · {view.channel}
           </p>
           <h1 className="font-serif mt-2 text-3xl tracking-tight">
@@ -96,29 +103,46 @@ export function OutreachDetail({
         <StatusBadge status={view.status} />
       </div>
 
+      <article className="border-y py-6">
+        <p className="mb-4 text-xs text-muted-foreground">
+          From <span className="text-foreground">AI GTM Engine</span>
+          {view.companyName ? (
+            <>
+              {" "}
+              → {view.companyName}
+            </>
+          ) : null}
+        </p>
+        <p className="mb-4 font-semibold">{subject || "Untitled draft"}</p>
+        <div className="space-y-3 text-[15px] leading-relaxed whitespace-pre-wrap">
+          {body}
+        </div>
+      </article>
+
       <div className="flex flex-wrap gap-2">
         {canDecide && onApprove ? (
-          <button
+          <Button
             type="button"
             disabled={pending}
             onClick={() => run(() => onApprove(view.id))}
-            className="rounded-md bg-[var(--foreground)] px-4 py-2 text-sm text-[var(--background)] disabled:opacity-50"
           >
+            {pending ? <Spinner /> : null}
             Approve
-          </button>
+          </Button>
         ) : null}
         {canReject && onReject ? (
-          <button
+          <Button
             type="button"
+            variant="outline"
             disabled={pending}
             onClick={() => run(() => onReject(view.id))}
-            className="rounded-md border border-[var(--rule)] px-4 py-2 text-sm disabled:opacity-50"
           >
             Reject
-          </button>
+          </Button>
         ) : null}
-        <button
+        <Button
           type="button"
+          variant="outline"
           data-testid="dry-run-button"
           disabled={pending || !canDryRun}
           title={
@@ -127,14 +151,13 @@ export function OutreachDetail({
               : "Send (dry run) is allowed only when status is APPROVED"
           }
           onClick={() => canDryRun && onDryRun && run(() => onDryRun(view.id))}
-          className="rounded-md border border-[var(--rule)] px-4 py-2 text-sm disabled:opacity-50"
         >
           Send (dry run)
-        </button>
+        </Button>
       </div>
 
       {error ? (
-        <p className="text-sm text-red-800" role="alert">
+        <p className="text-sm text-destructive" role="alert">
           {error}
         </p>
       ) : null}
@@ -151,39 +174,35 @@ export function OutreachDetail({
           );
         }}
       >
-        <label className="block text-sm">
-          <span className="text-[var(--muted)]">Email subject</span>
-          <input
+        <Label>
+          <span className="text-muted-foreground">Email subject</span>
+          <Input
             value={subject}
             onChange={(event) => setSubject(event.target.value)}
-            className="mt-1 w-full rounded-md border border-[var(--rule)] bg-[var(--card)] px-3 py-2"
+            className="mt-1"
           />
-        </label>
-        <label className="block text-sm">
-          <span className="text-[var(--muted)]">Email body</span>
-          <textarea
+        </Label>
+        <Label>
+          <span className="text-muted-foreground">Email body</span>
+          <Textarea
             value={body}
             onChange={(event) => setBody(event.target.value)}
             rows={8}
-            className="mt-1 w-full rounded-md border border-[var(--rule)] bg-[var(--card)] px-3 py-2"
+            className="mt-1"
           />
-        </label>
-        <label className="block text-sm">
-          <span className="text-[var(--muted)]">LinkedIn message</span>
-          <textarea
+        </Label>
+        <Label>
+          <span className="text-muted-foreground">LinkedIn message</span>
+          <Textarea
             value={linkedinMessage}
             onChange={(event) => setLinkedinMessage(event.target.value)}
             rows={4}
-            className="mt-1 w-full rounded-md border border-[var(--rule)] bg-[var(--card)] px-3 py-2"
+            className="mt-1"
           />
-        </label>
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-md border border-[var(--rule)] px-3 py-2 text-sm"
-        >
+        </Label>
+        <Button type="submit" variant="outline" disabled={pending}>
           Save edit
-        </button>
+        </Button>
       </form>
 
       <form
@@ -196,14 +215,14 @@ export function OutreachDetail({
           void run(() => onRegenerate(view.id, { tone, cta }));
         }}
       >
-        <label className="block text-sm">
-          <span className="text-[var(--muted)]">Tone</span>
+        <Label>
+          <span className="text-muted-foreground">Tone</span>
           <select
             value={tone}
             onChange={(event) =>
               setTone(event.target.value as typeof tone)
             }
-            className="mt-1 rounded-md border border-[var(--rule)] bg-[var(--card)] px-3 py-2"
+            className={selectClass}
           >
             {OUTREACH_TONES.map((value) => (
               <option key={value} value={value}>
@@ -211,13 +230,13 @@ export function OutreachDetail({
               </option>
             ))}
           </select>
-        </label>
-        <label className="block text-sm">
-          <span className="text-[var(--muted)]">CTA</span>
+        </Label>
+        <Label>
+          <span className="text-muted-foreground">CTA</span>
           <select
             value={cta}
             onChange={(event) => setCta(event.target.value as typeof cta)}
-            className="mt-1 rounded-md border border-[var(--rule)] bg-[var(--card)] px-3 py-2"
+            className={selectClass}
           >
             {OUTREACH_CTAS.map((value) => (
               <option key={value} value={value}>
@@ -225,47 +244,44 @@ export function OutreachDetail({
               </option>
             ))}
           </select>
-        </label>
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-md border border-[var(--rule)] px-3 py-2 text-sm"
-        >
+        </Label>
+        <Button type="submit" variant="outline" disabled={pending}>
           Regenerate
-        </button>
+        </Button>
       </form>
 
       <section>
         <h2 className="font-serif text-xl tracking-tight">Cited signals</h2>
         {view.citedSignals.length === 0 ? (
-          <p className="mt-2 text-sm text-[var(--muted)]">
+          <p className="mt-2 text-sm text-muted-foreground">
             No cited signals stored on this draft.
           </p>
         ) : (
           <ul className="mt-3 space-y-2">
             {view.citedSignals.map((signal) => (
-              <li
-                key={signal.id}
-                className="rounded-lg border border-[var(--rule)] bg-[var(--card)] p-4"
-              >
-                <p className="text-xs tracking-wide text-[var(--muted)] uppercase">
-                  {signal.kind} · {signal.type}
-                </p>
-                <p className="mt-1 text-sm">{signal.summary}</p>
-                <ul className="mt-2 space-y-1">
-                  {signal.sourceUrls.map((url) => (
-                    <li key={url}>
-                      <a
-                        href={url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-sm underline"
-                      >
-                        {url}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
+              <li key={signal.id}>
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-xs tracking-wide text-muted-foreground uppercase">
+                      {signal.kind} · {signal.type}
+                    </p>
+                    <p className="mt-1 text-sm">{signal.summary}</p>
+                    <ul className="mt-2 space-y-1">
+                      {signal.sourceUrls.map((url) => (
+                        <li key={url}>
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-sm underline"
+                          >
+                            {url}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
               </li>
             ))}
           </ul>
@@ -290,7 +306,7 @@ export function OutreachDetail({
         </ul>
       </section>
 
-      <p className="flex flex-wrap gap-4 text-sm text-[var(--muted)]">
+      <p className="flex flex-wrap gap-4 text-sm text-muted-foreground">
         <Link href="/outreach" className="underline">
           Back to outreach
         </Link>

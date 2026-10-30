@@ -61,7 +61,7 @@ export default async function OutreachDetailPage({
 }) {
   const { id } = await params;
   return (
-    <Suspense fallback={<p className="p-6 text-sm text-[var(--muted)]">Loading…</p>}>
+    <Suspense fallback={<p className="p-6 text-sm text-muted-foreground">Loading…</p>}>
       <OutreachDetailBody id={id} />
     </Suspense>
   );

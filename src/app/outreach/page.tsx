@@ -55,7 +55,7 @@ export default async function OutreachPage({
 }) {
   const params = await searchParams;
   return (
-    <Suspense fallback={<p className="p-6 text-sm text-[var(--muted)]">Loading…</p>}>
+    <Suspense fallback={<p className="p-6 text-sm text-muted-foreground">Loading…</p>}>
       <OutreachBody companyId={params.companyId} />
     </Suspense>
   );

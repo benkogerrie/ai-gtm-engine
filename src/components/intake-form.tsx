@@ -2,6 +2,11 @@
 
 import { useActionState } from "react";
 import { submitIntakeAction, type IntakeState } from "@/app/actions/intake";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
 
 const initial: IntakeState = {};
 
@@ -18,20 +23,20 @@ function Field({
   required?: boolean;
   hint?: string;
 }) {
-  const cls =
-    "mt-1 w-full rounded-md border border-[var(--rule)] bg-[var(--card)] px-3 py-2 text-sm";
   return (
-    <label className="block text-sm">
+    <Label>
       <span>{label}</span>
       {textarea ? (
-        <textarea name={name} required={required} rows={4} className={cls} />
+        <Textarea name={name} required={required} rows={4} className="mt-1" />
       ) : (
-        <input name={name} required={required} className={cls} />
+        <Input name={name} required={required} className="mt-1" />
       )}
       {hint ? (
-        <span className="mt-1 block text-xs text-[var(--muted)]">{hint}</span>
+        <span className="mt-1 block text-xs font-normal text-muted-foreground">
+          {hint}
+        </span>
       ) : null}
-    </label>
+    </Label>
   );
 }
 
@@ -41,7 +46,7 @@ export function IntakeForm({ mockMode }: { mockMode: boolean }) {
   return (
     <form action={action} className="mt-8 space-y-5">
       {mockMode ? (
-        <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm">
+        <p className="rounded-md border border-accent bg-accent px-3 py-2 text-sm text-accent-foreground">
           MOCK output — DEEPSEEK_API_KEY is not set. Inference will use the labeled
           mock client.
         </p>
@@ -77,18 +82,21 @@ export function IntakeForm({ mockMode }: { mockMode: boolean }) {
       </div>
 
       {state.error ? (
-        <p className="text-sm text-red-800" role="alert">
+        <p className="text-sm text-destructive" role="alert">
           {state.error}
         </p>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-md bg-[var(--foreground)] px-4 py-2 text-sm text-[var(--background)] disabled:opacity-50"
-      >
-        {pending ? "Inferring ICP…" : "Submit product and infer ICP"}
-      </button>
+      <Button type="submit" disabled={pending}>
+        {pending ? (
+          <>
+            <Spinner />
+            Inferring ICP…
+          </>
+        ) : (
+          "Submit product and infer ICP"
+        )}
+      </Button>
     </form>
   );
 }

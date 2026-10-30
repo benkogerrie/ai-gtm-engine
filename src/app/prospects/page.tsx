@@ -11,7 +11,21 @@ import {
   type DiscoveryRunSnapshot,
 } from "@/lib/discovery";
 import { DraftOutreachButton } from "@/components/draft-outreach-button";
-import { EvidenceLabelBadge, EvidenceLegend } from "@/components/evidence-label";
+import {
+  EvidenceLabelBadge,
+  EvidenceLegend,
+  EvidenceRelevanceBadge,
+} from "@/components/evidence-label";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { labelDiscoveryClaim } from "@/lib/discovery/labels";
 import { aggregateByOrganization } from "@/lib/discovery/names";
 import { ProspectsForm } from "./prospects-form";
@@ -20,17 +34,10 @@ export const maxDuration = 60;
 export const instant = false;
 
 function ModeBadge({ mode }: { mode: "LIVE" | "MOCK" }) {
-  const live = mode === "LIVE";
   return (
-    <span
-      className={
-        live
-          ? "rounded-full bg-emerald-800 px-2.5 py-0.5 text-[10px] font-semibold tracking-[0.16em] text-white uppercase"
-          : "rounded-full border border-[var(--rule)] bg-[var(--card)] px-2.5 py-0.5 text-[10px] font-semibold tracking-[0.16em] text-[var(--muted)] uppercase"
-      }
-    >
-      {live ? "LIVE" : "MOCK"}
-    </span>
+    <Badge variant={mode === "LIVE" ? "verified" : "outline"}>
+      {mode === "LIVE" ? "LIVE" : "MOCK"}
+    </Badge>
   );
 }
 
@@ -81,50 +88,49 @@ function RunPanel({ run }: { run: DiscoveryRunSnapshot }) {
       <div className="flex flex-wrap items-center gap-3">
         <h2 className="font-serif text-2xl tracking-tight">Prospects</h2>
         <ModeBadge mode={run.mode} />
-        <span className="text-xs tracking-wide text-[var(--muted)] uppercase">
-          {run.status}
-        </span>
+        <Badge variant="outline">{run.status}</Badge>
       </div>
-      <p className="mt-2 text-sm text-[var(--muted)]">
+      <p className="mt-2 text-sm text-muted-foreground">
         {run.prospects.length} companies · {run.rejectedClaimCount} unsupported
         claims dropped · {run.droppedCompanyCount} companies dropped
         {run.icpId ? ` · ICP ${run.icpId.slice(0, 8)}` : ""}
       </p>
-      <p className="mt-1 text-xs tracking-wide text-[var(--muted)] uppercase">
+      <p className="mt-1 text-xs tracking-wide text-muted-foreground uppercase">
         {pathLabel(run)}
       </p>
       {run.error ? (
-        <p className="mt-3 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <p className="mt-3 rounded-md border border-destructive/30 bg-secondary px-3 py-2 text-sm text-destructive">
           {run.error}
         </p>
       ) : null}
 
       {aggregateByOrganization(run.prospects).length === 0 ? (
-        <p className="mt-6 rounded-lg border border-[var(--rule)] bg-[var(--card)] p-5 text-sm text-[var(--muted)]">
-          {run.status === "failed"
-            ? "This run failed. The live DeepSeek path does not silently fall back to a heuristic."
-            : run.mode === "MOCK"
-              ? "MOCK run: synthetic search hits are never stored as citations, so no fabricated companies are shown. Add BRAVE_SEARCH_API_KEY and DEEPSEEK_API_KEY for a live run."
-              : "No cited buyer organizations survived validation for this run."}
-        </p>
+        <Card className="mt-6">
+          <CardContent className="p-5 text-sm text-muted-foreground">
+            {run.status === "failed"
+              ? "This run failed. The live DeepSeek path does not silently fall back to a heuristic."
+              : run.mode === "MOCK"
+                ? "MOCK run: synthetic search hits are never stored as citations, so no fabricated companies are shown. Add BRAVE_SEARCH_API_KEY and DEEPSEEK_API_KEY for a live run."
+                : "No cited buyer organizations survived validation for this run."}
+          </CardContent>
+        </Card>
       ) : (
-        <div className="mt-6 overflow-x-auto rounded-lg border border-[var(--rule)] bg-[var(--card)]">
-          <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-[var(--rule)] text-xs tracking-wide text-[var(--muted)] uppercase">
-              <tr>
-                <th className="px-4 py-3">Company</th>
-                <th className="px-4 py-3">Fit</th>
-                <th className="px-4 py-3">Rationale & signals</th>
-                <th className="px-4 py-3">Sources</th>
-              </tr>
-            </thead>
-            <tbody>
+        <div className="mt-6 overflow-x-auto rounded-lg border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Company</TableHead>
+                <TableHead>Fit</TableHead>
+                <TableHead>Rationale & signals</TableHead>
+                <TableHead>Sources</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {aggregateByOrganization(run.prospects).map((prospect) => (
-                <tr
+                <TableRow
                   key={prospect.companyId ?? `${prospect.name}-${prospect.domain}`}
-                  className="border-b border-[var(--rule)] last:border-b-0 align-top"
                 >
-                  <td className="px-4 py-3">
+                  <TableCell>
                     <p className="font-medium">{prospect.name}</p>
                     {prospect.domain ? (
                       prospect.websiteUrl ? (
@@ -132,12 +138,12 @@ function RunPanel({ run }: { run: DiscoveryRunSnapshot }) {
                           href={prospect.websiteUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-xs text-[var(--muted)] underline decoration-[var(--rule)] underline-offset-2"
+                          className="text-xs text-muted-foreground underline underline-offset-2"
                         >
                           {prospect.domain}
                         </a>
                       ) : (
-                        <p className="text-xs text-[var(--muted)]">
+                        <p className="text-xs text-muted-foreground">
                           {prospect.domain}
                         </p>
                       )
@@ -147,23 +153,25 @@ function RunPanel({ run }: { run: DiscoveryRunSnapshot }) {
                         <DraftOutreachButton companyId={prospect.companyId} />
                       </div>
                     ) : null}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
                     <p>{prospect.fitScore}</p>
-                    <EvidenceLabelBadge label="INFERRED" />
-                    {prospect.evidenceRelevance ? (
-                      <p className="mt-1 text-[10px] tracking-wide text-[var(--muted)] uppercase">
-                        {prospect.evidenceRelevance} evidence
-                      </p>
-                    ) : null}
-                  </td>
-                  <td className="px-4 py-3">
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      <EvidenceLabelBadge label="INFERRED" />
+                      {prospect.evidenceRelevance ? (
+                        <EvidenceRelevanceBadge
+                          relevance={prospect.evidenceRelevance}
+                        />
+                      ) : null}
+                    </div>
+                  </TableCell>
+                  <TableCell>
                     <p>{prospect.rationale}</p>
                     <div className="mt-1">
                       <EvidenceLabelBadge label="INFERRED" />
                     </div>
                     {prospect.signals.length > 0 ? (
-                      <ul className="mt-2 list-disc pl-4 text-xs text-[var(--muted)]">
+                      <ul className="mt-2 list-disc pl-4 text-xs text-muted-foreground">
                         {prospect.signals.map((signal) => (
                           <li key={`${signal.sourceUrl}-${signal.summary}`}>
                             {signal.summary}
@@ -171,8 +179,8 @@ function RunPanel({ run }: { run: DiscoveryRunSnapshot }) {
                         ))}
                       </ul>
                     ) : null}
-                  </td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell>
                     <ul className="grid gap-1">
                       {uniqueSources(prospect.claims).map((source) => (
                         <li key={source.url}>
@@ -180,7 +188,7 @@ function RunPanel({ run }: { run: DiscoveryRunSnapshot }) {
                             href={source.url}
                             target="_blank"
                             rel="noreferrer"
-                            className="underline decoration-[var(--rule)] underline-offset-2"
+                            className="underline underline-offset-2"
                           >
                             {source.title}
                             {source.domain && source.title !== source.domain
@@ -196,11 +204,11 @@ function RunPanel({ run }: { run: DiscoveryRunSnapshot }) {
                         </li>
                       ))}
                     </ul>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
 
@@ -218,24 +226,25 @@ function RunPanel({ run }: { run: DiscoveryRunSnapshot }) {
                 domain = category.sourceUrl;
               }
               return (
-                <li
-                  key={`${category.category}-${category.sourceUrl}`}
-                  className="rounded-lg border border-[var(--rule)] bg-[var(--card)] p-4 text-sm"
-                >
-                  <p className="font-medium">{category.category}</p>
-                  {category.examples.length > 0 ? (
-                    <p className="mt-1 text-[var(--muted)]">
-                      {category.examples.join(", ")}
-                    </p>
-                  ) : null}
-                  <a
-                    href={category.sourceUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-2 inline-block underline decoration-[var(--rule)] underline-offset-2"
-                  >
-                    {domain}
-                  </a>
+                <li key={`${category.category}-${category.sourceUrl}`}>
+                  <Card>
+                    <CardContent className="p-4 text-sm">
+                      <p className="font-medium">{category.category}</p>
+                      {category.examples.length > 0 ? (
+                        <p className="mt-1 text-muted-foreground">
+                          {category.examples.join(", ")}
+                        </p>
+                      ) : null}
+                      <a
+                        href={category.sourceUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 inline-block underline underline-offset-2"
+                      >
+                        {domain}
+                      </a>
+                    </CardContent>
+                  </Card>
                 </li>
               );
             })}
@@ -278,11 +287,11 @@ async function ProspectsBody({
   return (
     <>
       {params.error === "invalid" ? (
-        <p className="mb-4 text-sm text-red-800">
+        <p className="mb-4 text-sm text-destructive">
           Product summary and at least one industry are required.
         </p>
       ) : null}
-      <p className="mb-4 text-xs text-[var(--muted)]">
+      <p className="mb-4 text-xs text-muted-foreground">
         Search {configured.search ? "configured" : "MOCK (no Brave key)"} · LLM{" "}
         {configured.llm ? "configured" : "MOCK (no DeepSeek key)"}
         {params.icp ? ` · linked ICP ${params.icp.slice(0, 8)}` : ""}
@@ -301,7 +310,7 @@ export default function ProspectsPage({
   return (
     <AppShell eyebrow="B004 · Live discovery" showLogout>
       <h1 className="font-serif text-4xl tracking-tight">Prospects</h1>
-      <p className="mt-4 max-w-2xl text-[var(--muted)]">
+      <p className="mt-4 max-w-2xl text-muted-foreground">
         From an approved ICP, search live public sources for named buyer
         organizations. Only claims that cite a result URL from this run are kept.
         Duplicate rows for the same organization are collapsed.
@@ -312,7 +321,7 @@ export default function ProspectsPage({
       <div className="mt-10">
         <Suspense
           fallback={
-            <p className="text-sm text-[var(--muted)]">Loading runs…</p>
+            <p className="text-sm text-muted-foreground">Loading runs…</p>
           }
         >
           <ProspectsBody searchParams={searchParams} />

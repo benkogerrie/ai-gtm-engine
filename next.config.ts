@@ -11,6 +11,9 @@ const nextConfig: NextConfig = {
     "/icp/[id]": ["./drizzle/**/*"],
     "/login": ["./drizzle/**/*"],
   },
+  outputFileTracingExcludes: {
+    "*": ["./design/**"],
+  },
   turbopack: {
     rules: {
       "*.css": {
@@ -18,6 +21,17 @@ const nextConfig: NextConfig = {
         as: "*.css",
       },
     },
+  },
+  webpack: (config) => {
+    const ignored = config.watchOptions?.ignored;
+    config.watchOptions = {
+      ...config.watchOptions,
+      ignored: [
+        ...(Array.isArray(ignored) ? ignored : ignored ? [ignored] : []),
+        "**/design/**",
+      ],
+    };
+    return config;
   },
 };
 
