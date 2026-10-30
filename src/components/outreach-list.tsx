@@ -123,6 +123,7 @@ export function OutreachList({
             ) : null}
             <Button
               type="submit"
+              className="w-fit"
               disabled={draftPending || companies.length === 0}
             >
               {draftPending ? (

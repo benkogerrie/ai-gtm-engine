@@ -8,7 +8,7 @@ export function SubmitButton() {
   const { pending } = useFormStatus();
   return (
     <div className="flex flex-col gap-2">
-      <Button type="submit" disabled={pending} aria-busy={pending}>
+      <Button type="submit" disabled={pending} aria-busy={pending} className="w-fit">
         {pending ? (
           <>
             <Spinner />
