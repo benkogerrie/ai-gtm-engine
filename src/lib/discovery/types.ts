@@ -35,6 +35,16 @@ export const discoveryRunStatusSchema = z.enum([
 ]);
 export type DiscoveryRunStatus = z.infer<typeof discoveryRunStatusSchema>;
 
+export const evidenceRelevanceSchema = z.enum(["strong", "peripheral"]);
+export type EvidenceRelevance = z.infer<typeof evidenceRelevanceSchema>;
+
+export const evidenceLabelSchema = z.enum([
+  "VERIFIED",
+  "INFERRED",
+  "source-candidate",
+]);
+export type EvidenceLabel = z.infer<typeof evidenceLabelSchema>;
+
 export const discoveryClaimSchema = z.object({
   field: z.string().min(1),
   value: z.string().min(1),
@@ -42,6 +52,7 @@ export const discoveryClaimSchema = z.object({
   quote: z.string().min(1),
   sourceTitle: z.string().optional(),
   sourceDomain: z.string().optional(),
+  relevance: evidenceRelevanceSchema.optional(),
 });
 export type DiscoveryClaim = z.infer<typeof discoveryClaimSchema>;
 
@@ -68,6 +79,7 @@ export const discoveryCandidateSchema = z.object({
   whyFit: z.string().min(1),
   fitScore: z.number().int().min(0).max(100).optional(),
   rationale: z.string().optional(),
+  evidenceRelevance: evidenceRelevanceSchema.optional(),
   signals: z.array(discoverySignalSchema).default([]),
   claims: z.array(discoveryClaimSchema).min(1),
 });
@@ -81,6 +93,7 @@ export const scoredProspectSchema = z.object({
   whyFit: z.string().min(1),
   fitScore: z.number().int().min(0).max(100),
   rationale: z.string().min(1),
+  evidenceRelevance: evidenceRelevanceSchema.optional(),
   signals: z.array(discoverySignalSchema),
   claims: z.array(discoveryClaimSchema),
 });

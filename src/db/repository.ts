@@ -227,6 +227,14 @@ export async function getIcpForOrg(db: AppDatabase, id: string, orgId: string) {
   return row ?? null;
 }
 
+export async function listIcpsForOrg(db: AppDatabase, orgId: string) {
+  return db
+    .select()
+    .from(icps)
+    .where(eq(icps.orgId, orgId))
+    .orderBy(desc(icps.updatedAt));
+}
+
 export async function getOrganization(db: AppDatabase, id: string) {
   const [row] = await db
     .select()

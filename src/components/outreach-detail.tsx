@@ -290,11 +290,25 @@ export function OutreachDetail({
         </ul>
       </section>
 
-      <p className="text-sm text-[var(--muted)]">
+      <p className="flex flex-wrap gap-4 text-sm text-[var(--muted)]">
         <Link href="/outreach" className="underline">
-          Back to list
+          Back to outreach
         </Link>
-        . Dry-run never contacts anyone.
+        {view.companyId ? (
+          <Link
+            href={`/outreach/new?companyId=${encodeURIComponent(view.companyId)}`}
+            className="underline"
+          >
+            Prospect draft
+          </Link>
+        ) : null}
+        <Link href="/prospects" className="underline">
+          Prospects
+        </Link>
+        <Link href="/dashboard" className="underline">
+          Dashboard
+        </Link>
+        <span>Dry-run never contacts anyone.</span>
       </p>
     </div>
   );

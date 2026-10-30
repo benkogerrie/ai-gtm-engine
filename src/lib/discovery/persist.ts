@@ -5,9 +5,11 @@ import {
   createCompany,
   createCompetitor,
   createFieldAssertion,
+  listCompanies,
 } from "@/db/repository";
 import { isRealSearchEvidence, toCitationCandidate } from "@/lib/search/evidence";
 import type { SearchResult } from "@/lib/search/types";
+import { companiesMatchOrganization } from "./names";
 import { fitTierFromScore } from "./score";
 import { resultByUrl } from "./validate";
 import type {
@@ -77,24 +79,36 @@ export async function persistProspects(
   region: string | null,
 ): Promise<ScoredProspect[]> {
   const persisted: ScoredProspect[] = [];
+  const known = await listCompanies(db, orgId);
 
   for (const prospect of prospects) {
     const websiteUrl = prospect.websiteUrl;
-    const company = await createCompany(
-      db,
-      {
-        orgId,
-        name: prospect.name,
-        domain: prospect.domain || null,
-        websiteUrl,
-        industry,
-        region,
-        fitScore: prospect.fitScore,
-        fitTier: fitTierFromScore(prospect.fitScore),
-        negativeSignals: [],
-      },
-      actor,
+    const existing = known.find((company) =>
+      companiesMatchOrganization(
+        { name: company.name, domain: company.domain },
+        { name: prospect.name, domain: prospect.domain },
+      ),
     );
+    const company =
+      existing ??
+      (await createCompany(
+        db,
+        {
+          orgId,
+          name: prospect.name,
+          domain: prospect.domain || null,
+          websiteUrl,
+          industry,
+          region,
+          fitScore: prospect.fitScore,
+          fitTier: fitTierFromScore(prospect.fitScore),
+          negativeSignals: [],
+        },
+        actor,
+      ));
+    if (!existing) {
+      known.push(company);
+    }
 
     const fieldClaims: DiscoveryClaim[] = [...prospect.claims];
     if (prospect.claims[0]?.sourceUrl) {
@@ -117,6 +131,7 @@ export async function persistProspects(
       if (!citationId) {
         continue;
       }
+      const fact = claim.field !== "fitScore" && claim.field !== "rationale";
       await createFieldAssertion(
         db,
         {
@@ -126,7 +141,7 @@ export async function persistProspects(
           fieldName: claim.field,
           fieldValue:
             claim.field === "fitScore" ? prospect.fitScore : claim.value,
-          verificationStatus: "INFERRED",
+          verificationStatus: fact ? "VERIFIED" : "INFERRED",
           assertedBy: "agent",
           citationIds: [citationId],
         },

@@ -24,6 +24,7 @@ export const PROSPECT_JSON_EXAMPLE = `{
       "whyFit": "US health system rolling out workforce scheduling after staffing pressure.",
       "fitScore": 86,
       "rationale": "The cited press release describes a system-wide nurse scheduling platform launch, which matches a hospital buyer for AI shift scheduling.",
+      "evidenceRelevance": "strong",
       "signals": [
         {
           "summary": "System-wide workforce management platform launch",
@@ -35,7 +36,8 @@ export const PROSPECT_JSON_EXAMPLE = `{
           "field": "name",
           "value": "Ochsner Health",
           "sourceUrl": "https://news.ochsner.org/news-releases/example",
-          "quote": "Ochsner Health announces system-wide launch of a workforce management platform"
+          "quote": "Ochsner Health announces system-wide launch of a workforce management platform",
+          "relevance": "strong"
         }
       ]
     }
@@ -60,6 +62,8 @@ Rules:
 - Include vendors and media in the array with the correct role so they can be filtered. Still extract the buyer named in a vendor/press article when one is clearly named.
 - Every claim.sourceUrl and signal.sourceUrl MUST be copied exactly from a supplied result URL. Do not invent companies, domains, URLs, or signals.
 - fitScore is an integer 0-100 and MUST differ across companies when the cited evidence differs. Ground rationale in the cited quote.
+- evidenceRelevance is exactly "strong" or "peripheral". strong = the cited source is directly about nurse/shift scheduling or staffing operations for this product. peripheral = general nursing, hospital, or workforce articles that do not describe scheduling or staffing operations. If EVERY claim is peripheral, fitScore MUST be 54 or lower and say so in rationale.
+- Each claim.relevance is "strong" or "peripheral" using the same rule.
 - whyFit and rationale are plain text (no HTML tags or entities).
 - JSON only.`;
 

@@ -28,4 +28,37 @@ describe("normalizeLlmProspects", () => {
     expect(normalized.companies[0]?.domain).toBe("ochsner.org");
     expect(normalized.companies[0]?.role).toBe("buyer");
   });
+
+  it("maps evidence relevance aliases", () => {
+    const normalized = normalizeLlmProspects({
+      companies: [
+        {
+          name: "Mercy",
+          domain: "mercy.net",
+          role: "buyer",
+          whyFit: "Flexible nurse scheduling",
+          fitScore: 70,
+          rationale: "Cited scheduling post",
+          evidence_relevance: "direct",
+          claims: [
+            {
+              field: "name",
+              value: "Mercy",
+              sourceUrl: "https://www.mercy.net/news/flexible-scheduling",
+              quote: "flexible scheduling for nurses",
+              relevance: "strong",
+            },
+          ],
+        },
+      ],
+    }) as {
+      companies: Array<{
+        evidenceRelevance?: string;
+        claims: Array<{ relevance?: string }>;
+      }>;
+    };
+
+    expect(normalized.companies[0]?.evidenceRelevance).toBe("strong");
+    expect(normalized.companies[0]?.claims[0]?.relevance).toBe("strong");
+  });
 });

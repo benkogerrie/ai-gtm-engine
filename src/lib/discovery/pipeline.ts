@@ -32,7 +32,7 @@ import {
 } from "./filters";
 import { hostFromUrl } from "./filters";
 import { cleanText } from "./html";
-import { dedupeByOrganization } from "./names";
+import { aggregateByOrganization } from "./names";
 import { persistCompetitorCategories, persistProspects } from "./persist";
 import { countryFromGeographies, buildCompetitorQuery, buildDiscoveryQueries } from "./queries";
 import {
@@ -233,7 +233,7 @@ export async function runDiscovery(
 
     const buyers = filterBuyers(filtered);
     const vendors = collectVendors(filtered);
-    const uniqueBuyers = dedupeByOrganization(buyers);
+    const uniqueBuyers = aggregateByOrganization(buyers);
 
     const scored: ScoredProspect[] = uniqueBuyers.map((candidate) => {
       if (mode === "LIVE") {
@@ -252,6 +252,7 @@ export async function runDiscovery(
           whyFit: cleanText(candidate.whyFit, 400),
           fitScore: llmScore.fitScore,
           rationale: llmScore.rationale,
+          evidenceRelevance: llmScore.evidenceRelevance,
           signals: candidate.signals.filter((signal) =>
             isClaimUrlAllowed(
               signal.sourceUrl,
@@ -261,7 +262,10 @@ export async function runDiscovery(
           claims: eligibleClaims,
         };
       }
-      const { fitScore, rationale } = scoreProspect(candidate, input);
+      const { fitScore, rationale, evidenceRelevance } = scoreProspect(
+        candidate,
+        input,
+      );
       const eligibleClaims = citationEligibleClaims(candidate.claims, allResults);
       return {
         name: candidate.name,
@@ -270,6 +274,7 @@ export async function runDiscovery(
         whyFit: cleanText(candidate.whyFit, 400),
         fitScore,
         rationale,
+        evidenceRelevance,
         signals: candidate.signals.filter((signal) =>
           isClaimUrlAllowed(
             signal.sourceUrl,

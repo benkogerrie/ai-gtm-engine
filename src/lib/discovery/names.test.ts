@@ -70,4 +70,42 @@ describe("brandFromDomain / org key", () => {
   it("normalizes org keys without legal suffixes", () => {
     expect(normalizeOrgKey("Ochsner Health")).toBe(normalizeOrgKey("Ochsner"));
   });
+
+  it("aggregates HCA rows from separate sources into one org with merged claims", () => {
+    const unique = dedupeByOrganization([
+      {
+        name: "HCA Healthcare",
+        domain: "hcahealthcare.com",
+        claims: [
+          {
+            field: "name",
+            value: "HCA Healthcare",
+            sourceUrl: "https://hcahealthcare.com/nurses",
+            quote: "HCA nurse scheduling program",
+          },
+        ],
+      },
+      {
+        name: "HCA",
+        domain: "",
+        claims: [
+          {
+            field: "name",
+            value: "HCA",
+            sourceUrl: "https://www.modernhealthcare.com/hca-staffing",
+            quote: "HCA hospitals face nursing coverage pressure",
+          },
+        ],
+      },
+    ]);
+    expect(unique).toHaveLength(1);
+    expect(unique[0]?.name).toMatch(/HCA/i);
+    expect(unique[0]?.claims).toHaveLength(2);
+    expect(unique[0]?.claims.map((claim) => claim.sourceUrl)).toEqual(
+      expect.arrayContaining([
+        "https://hcahealthcare.com/nurses",
+        "https://www.modernhealthcare.com/hca-staffing",
+      ]),
+    );
+  });
 });

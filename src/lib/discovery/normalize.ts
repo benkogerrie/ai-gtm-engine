@@ -117,6 +117,7 @@ function normalizeClaim(value: unknown): unknown {
     quote: quote ?? fieldValue ?? field,
     sourceTitle: firstString(pick(record, ["sourceTitle", "title"])),
     sourceDomain: firstString(pick(record, ["sourceDomain", "domain"])),
+    relevance: normalizeRelevance(pick(record, ["relevance", "evidenceRelevance"])),
   };
 }
 
@@ -170,9 +171,23 @@ function normalizeCompany(value: unknown): unknown {
     whyFit: cleanText(whyFit, 400),
     fitScore: firstNumber(pick(record, ["fitScore", "fit_score", "score"])),
     rationale: firstString(pick(record, ["rationale", "reason", "scoringRationale"])),
+    evidenceRelevance: normalizeRelevance(
+      pick(record, ["evidenceRelevance", "evidence_relevance", "relevance"]),
+    ),
     signals: asList(pick(record, ["signals", "buyingSignals"])).map(normalizeSignal),
     claims,
   };
+}
+
+function normalizeRelevance(value: unknown): "strong" | "peripheral" | undefined {
+  const text = firstString(value)?.toLowerCase();
+  if (text === "strong" || text === "direct" || text === "high") {
+    return "strong";
+  }
+  if (text === "peripheral" || text === "weak" || text === "low" || text === "indirect") {
+    return "peripheral";
+  }
+  return undefined;
 }
 
 function normalizeCategory(value: unknown): unknown {
