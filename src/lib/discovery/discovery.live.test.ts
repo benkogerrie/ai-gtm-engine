@@ -10,12 +10,12 @@ const hasLiveKeys = hasBrave && hasLlm;
 
 const SAMPLE_ICP = {
   productSummary:
-    "B2B HRIS that automates payroll, benefits, and onboarding for mid-market companies",
-  industries: ["Human Resources Software", "HRIS"],
-  companySizes: ["200-2000 employees"],
+    "ShiftPilot — AI shift scheduling for hospitals and clinics that need nurse staffing coverage",
+  industries: ["General Medical and Surgical Hospitals", "health systems"],
+  companySizes: ["200-5000 employees"],
   geographies: ["United States"],
-  personas: ["VP People", "Head of HR Operations"],
-  triggers: ["HRIS RFP", "payroll migration"],
+  personas: ["Chief Nursing Officer", "VP Workforce"],
+  triggers: ["nurse staffing shortage", "EHR scheduling change"],
 };
 
 describe("live discovery", () => {

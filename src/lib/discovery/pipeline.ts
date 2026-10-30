@@ -137,6 +137,7 @@ export async function runDiscovery(
   let snapshot: DiscoveryRunSnapshot = {
     id: runId,
     orgId: deps.orgId,
+    icpId: input.icpId,
     status: "running",
     mode,
     input,

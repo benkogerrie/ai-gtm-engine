@@ -80,8 +80,9 @@ export async function getDiscoveryRun(
 export async function listDiscoveryRuns(
   db: AppDatabase,
   orgId: string,
-  limit = 10,
+  options: { limit?: number; icpId?: string } = {},
 ): Promise<DiscoveryRunSnapshot[]> {
+  const limit = options.limit ?? 10;
   const events = await listAuditEvents(db, { orgId, limit: 80 });
   const byId = new Map<string, DiscoveryRunSnapshot>();
   for (const event of events) {
@@ -90,6 +91,9 @@ export async function listDiscoveryRuns(
     }
     const parsed = discoveryRunSnapshotSchema.safeParse(event.after);
     if (!parsed.success || byId.has(parsed.data.id)) {
+      continue;
+    }
+    if (options.icpId && parsed.data.icpId !== options.icpId) {
       continue;
     }
     byId.set(parsed.data.id, parsed.data);

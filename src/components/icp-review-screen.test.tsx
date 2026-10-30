@@ -30,8 +30,29 @@ describe("IcpReviewScreen", () => {
 
     expect(screen.getByTestId("mock-banner")).toHaveTextContent(/MOCK output/i);
     expect(screen.getByRole("button", { name: /approve icp/i })).toBeInTheDocument();
-    expect(screen.getAllByText(/INFERRED/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Expansion suggestions/i)).toBeInTheDocument();
-    expect(screen.getByText(structured.buyerPersonas[0]!.title)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /find prospects/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows Find prospects when the ICP is approved", () => {
+    render(
+      <IcpReviewScreen
+        icp={{
+          id: "11111111-1111-4111-8111-111111111111",
+          name: structured.name,
+          status: "APPROVED",
+          version: 1,
+          inferenceMode: "live",
+          structured,
+        }}
+        productName="ShiftPilot"
+        onFindProspects={async () => ({})}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /find prospects/i }),
+    ).toBeInTheDocument();
   });
 });

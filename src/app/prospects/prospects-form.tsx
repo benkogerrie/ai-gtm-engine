@@ -3,17 +3,18 @@ import { SubmitButton } from "./submit-button";
 
 const SAMPLE = {
   productSummary:
-    "B2B HRIS that automates payroll, benefits, and onboarding for mid-market companies",
-  industries: "Human Resources Software, HRIS",
+    "ShiftPilot — AI shift scheduling for hospitals and clinics that need nurse staffing coverage",
+  industries: "General Medical and Surgical Hospitals, health systems, clinics",
   geography: "United States",
 };
 
-export function ProspectsForm() {
+export function ProspectsForm({ icpId }: { icpId?: string }) {
   return (
     <form
       action={startDiscoveryAction}
       className="grid gap-4 rounded-lg border border-[var(--rule)] bg-[var(--card)] p-5"
     >
+      {icpId ? <input type="hidden" name="icpId" value={icpId} /> : null}
       <label className="grid gap-1 text-sm">
         <span className="text-xs tracking-wide text-[var(--muted)] uppercase">
           Product summary

@@ -1,6 +1,7 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { connection } from "next/server";
+import { redirect } from "next/navigation";
+import { AppShell } from "@/components/app-shell";
 import { getDb } from "@/db/client";
 import {
   getDiscoveryPageAuth,
@@ -12,6 +13,7 @@ import {
 import { ProspectsForm } from "./prospects-form";
 
 export const maxDuration = 60;
+export const instant = false;
 
 function MockBadge({ mode }: { mode: "LIVE" | "MOCK" }) {
   if (mode !== "MOCK") {
@@ -37,6 +39,7 @@ function RunPanel({ run }: { run: DiscoveryRunSnapshot }) {
       <p className="mt-2 text-sm text-[var(--muted)]">
         {run.prospects.length} companies · {run.rejectedClaimCount} unsupported
         claims dropped · {run.droppedCompanyCount} companies dropped
+        {run.icpId ? ` · ICP ${run.icpId.slice(0, 8)}` : ""}
       </p>
       {run.error ? (
         <p className="mt-3 text-sm text-red-800">{run.error}</p>
@@ -144,18 +147,30 @@ function RunPanel({ run }: { run: DiscoveryRunSnapshot }) {
 async function ProspectsBody({
   searchParams,
 }: {
-  searchParams: Promise<{ runId?: string; error?: string }>;
+  searchParams: Promise<{ runId?: string; error?: string; icp?: string }>;
 }) {
   await connection();
   const params = await searchParams;
-  const auth = getDiscoveryPageAuth();
+  const next = params.icp
+    ? `/prospects?icp=${encodeURIComponent(params.icp)}`
+    : "/prospects";
+  const auth = await getDiscoveryPageAuth();
+  if (!auth) {
+    redirect(`/login?next=${encodeURIComponent(next)}`);
+  }
+
   const db = await getDb();
   const configured = isDiscoveryConfigured();
 
   const selected = params.runId
     ? await getDiscoveryRun(db, auth.orgId, params.runId)
     : null;
-  const runs = selected ? [selected] : await listDiscoveryRuns(db, auth.orgId, 5);
+  const runs = selected
+    ? [selected]
+    : await listDiscoveryRuns(db, auth.orgId, {
+        limit: 5,
+        icpId: params.icp,
+      });
   const run = selected ?? runs[0] ?? null;
 
   return (
@@ -168,8 +183,9 @@ async function ProspectsBody({
       <p className="mb-4 text-xs text-[var(--muted)]">
         Search {configured.search ? "configured" : "MOCK (no Brave key)"} · LLM{" "}
         {configured.llm ? "configured" : "MOCK (no DeepSeek key)"}
+        {params.icp ? ` · linked ICP ${params.icp.slice(0, 8)}` : ""}
       </p>
-      <ProspectsForm />
+      <ProspectsForm icpId={params.icp} />
       {run ? <RunPanel run={run} /> : null}
     </>
   );
@@ -178,39 +194,24 @@ async function ProspectsBody({
 export default function ProspectsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ runId?: string; error?: string }>;
+  searchParams: Promise<{ runId?: string; error?: string; icp?: string }>;
 }) {
   return (
-    <div className="flex min-h-full flex-col">
-      <header className="border-b border-[var(--rule)]">
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-5">
-          <p className="text-sm font-medium tracking-[0.18em] uppercase">
-            AI GTM Engine
-          </p>
-          <Link href="/" className="text-xs tracking-wide text-[var(--muted)]">
-            Home
-          </Link>
-        </div>
-      </header>
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 py-12">
-        <p className="text-xs font-medium tracking-[0.22em] text-[var(--muted)] uppercase">
-          B004 · Live discovery
-        </p>
-        <h1 className="font-serif mt-4 text-4xl tracking-tight">Prospects</h1>
-        <p className="mt-4 max-w-2xl text-[var(--muted)]">
-          From an ICP slice, search live public sources, keep only claims that
-          cite a result URL from this run, and persist evidence-backed companies.
-        </p>
-        <div className="mt-10">
-          <Suspense
-            fallback={
-              <p className="text-sm text-[var(--muted)]">Loading runs…</p>
-            }
-          >
-            <ProspectsBody searchParams={searchParams} />
-          </Suspense>
-        </div>
-      </main>
-    </div>
+    <AppShell eyebrow="B004 · Live discovery" showLogout>
+      <h1 className="font-serif text-4xl tracking-tight">Prospects</h1>
+      <p className="mt-4 max-w-2xl text-[var(--muted)]">
+        From an approved ICP, search live public sources for named buyer
+        organizations. Only claims that cite a result URL from this run are kept.
+      </p>
+      <div className="mt-10">
+        <Suspense
+          fallback={
+            <p className="text-sm text-[var(--muted)]">Loading runs…</p>
+          }
+        >
+          <ProspectsBody searchParams={searchParams} />
+        </Suspense>
+      </div>
+    </AppShell>
   );
 }

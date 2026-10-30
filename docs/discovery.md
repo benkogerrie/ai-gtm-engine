@@ -1,48 +1,46 @@
 # Live discovery
 
-Evidence-backed prospect discovery for the AI GTM Engine. From a standalone ICP slice, the engine builds Brave queries, extracts companies **only** from returned hits, drops unsupported claims, and persists `Company` + `Citation` + `FieldAssertion` rows through the B002 repository.
+Evidence-backed prospect discovery for the AI GTM Engine. From an approved ICP (or a standalone form), the engine builds Brave queries that look for **named buyer organizations**, extracts companies **only** from returned hits, drops unsupported claims, and persists `Company` + `Citation` + `FieldAssertion` rows through the B002 repository.
 
-This slice does **not** import B003 intake/ICP (that work lands on `b003-intake-icp`). `DiscoveryInput` is a tiny adapter-friendly shape: `productSummary`, `industries[]`, plus optional `companySizes`, `geographies`, `personas`, `triggers`, `excludeDomains`.
+`DiscoveryInput` stays a small adapter shape. B003 maps onto it via `discoveryInputFromIcp` (`src/lib/discovery/adapter.ts`): industries + NAICS names, headcount labels, persona titles, trigger summaries, and the product description.
 
 ## Pipeline
 
-1. Build 3–6 deterministic Brave queries (optional LLM refine when a live LLM is configured).
+1. Build 3–6 deterministic Brave queries aimed at concrete orgs (hospitals announcing staffing / scheduling / EHR changes). Healthcare ICPs get a hospital/health-system pack and `-best -top -listicle` exclusions.
 2. Search via `SearchClient`. The Brave client already serializes calls through `SearchRateLimiter` (~1 req/s).
 3. Extract candidate companies from those results (LLM when available, plus a deterministic title/domain fallback). Every claim must cite a result URL from **this** run.
 4. Server-side validation drops claims whose URL is not in the result set, then drops companies with no remaining claim.
-5. Negative filters: aggregators / listicles / directories (Wikipedia, LinkedIn lists, G2, Crunchbase hubs, news-roundup hosts), the seller `excludeDomains`, and the user's own domain.
+5. Negative filters: aggregators / listicles / directories (Wikipedia, LinkedIn lists, G2, Crunchbase hubs, news-roundup hosts), `excludeDomains`.
 6. Deduplicate by registrable domain.
 7. Fit score `0..100` with a short rationale (light heuristic; B005 owns full scoring).
-8. Persist companies, citations, and field assertions with audit events. Claims are stored as `INFERRED` (a URL is necessary but not sufficient for `VERIFIED`).
+8. Persist companies, citations, and field assertions with audit events. Claims are stored as `INFERRED`.
 9. Separate competitor-category step, also citation-required.
+
+Demo ICP: **ShiftPilot** (AI shift scheduling for hospitals/clinics) → US hospitals and health systems.
 
 ## Mock vs live
 
-The run is labeled **MOCK** when the search provider is `mock` **or** no live LLM key is configured (`DEEPSEEK_API_KEY`). Mock search hits never become citations (`toCitationCandidate` / `isRealSearchEvidence`). The engine does not fabricate companies, URLs, or signals: a MOCK search run persists no citations and shows an empty prospect table plus a MOCK badge.
+The run is labeled **MOCK** when the search provider is `mock` **or** no live LLM key is configured (`DEEPSEEK_API_KEY`). Mock search hits never become citations (`toCitationCandidate` / `isRealSearchEvidence`).
 
-Live mode needs `BRAVE_SEARCH_API_KEY` and `DEEPSEEK_API_KEY`. `pnpm test:live` includes `src/lib/discovery/discovery.live.test.ts` (skipped without both keys). Do not run live tests in CI.
+Live mode needs `BRAVE_SEARCH_API_KEY` and `DEEPSEEK_API_KEY`. `pnpm test:live` includes `src/lib/discovery/discovery.live.test.ts` (skipped without both keys).
 
 ## Persistence (no new table)
 
-No schema migration. Shared Neon already applies B002 + B003 `0002_icp_engine.sql`. Discovery run snapshots are stored in `audit_events.after` with actions `discovery.run.started|completed|failed` and `entityId = runId` (entity type `organization`). Companies and evidence still go through the existing repository.
+No `0003_*` migration. Run snapshots live in `audit_events.after` (`discovery.run.*`, `entityId = runId`) and carry optional `icpId` so `/prospects?icp=` can filter. Companies and evidence still go through the existing repository.
 
-## API
+## Auth
 
-| Method | Path | Auth |
-| --- | --- | --- |
-| POST | `/api/discovery/runs` | `Authorization: Bearer $APP_API_TOKEN` via `getAuthContext` (401 without token) |
-| GET | `/api/discovery/runs/[id]` | same |
-
-Org and actor come only from `APP_ORG_ID` / `APP_ACTOR_*`. Body `orgId` is ignored.
+- API `POST/GET /api/discovery/runs` still use `getAuthContext` (bearer `APP_API_TOKEN` or the session cookie). **401** without either.
+- `/prospects` and discovery server actions use `getDiscoveryPageAuth` → B003 `getPageAuth` (`src/lib/session.ts`). Unauthenticated users redirect to `/login?next=…`. `src/proxy.ts` also gates `/prospects`.
 
 ## UI
 
-`/prospects` — product summary + industries + geography form, prospect table (fit score, rationale, signals, clickable source URLs), run status, MOCK badge.
-
-Page auth lives in **one helper**: `src/lib/discovery/page-auth.ts` (`getDiscoveryPageAuth`). It uses `APP_*` env (no login page). After B003 cookie login (`/login`, `src/lib/session.ts`) merges, swap that helper only.
+- `/login` → `/intake` → `/icp/[id]`. When the ICP is **APPROVED**, **Find prospects** builds `DiscoveryInput` from that ICP and starts a run.
+- Results land on `/prospects?icp=<id>&runId=<run>`.
+- `/prospects` also has a manual ShiftPilot-prefilled form.
 
 ## Tests
 
-Unit (no network): query building, claim-URL validation, negative filters, domain dedupe, MOCK labeling, API 401.
+Unit (no network): query building (hospital org queries, not listicles), ICP adapter, claim-URL validation, negative filters, dedupe, MOCK labeling, API 401, page auth via session cookie.
 
-Live: `pnpm test:live` — sample HRIS ICP, `>= 3` companies each with `>= 1` real `https` citation.
+Live: ShiftPilot-style ICP, `>= 3` companies each with `>= 1` real `https` citation.

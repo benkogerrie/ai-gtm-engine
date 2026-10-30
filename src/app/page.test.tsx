@@ -21,11 +21,15 @@ describe("Home page", () => {
     }
 
     expect(screen.getAllByText("Coming soon")).toHaveLength(
-      PRODUCT_MODULES.length - 1,
+      PRODUCT_MODULES.length - 2,
     );
     expect(screen.getByRole("link", { name: "Discovery" })).toHaveAttribute(
       "href",
       "/prospects",
+    );
+    expect(screen.getByRole("link", { name: "Intake & ICP" })).toHaveAttribute(
+      "href",
+      "/intake",
     );
   });
 });

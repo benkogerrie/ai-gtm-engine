@@ -34,10 +34,14 @@ export function IcpReviewScreen({
   onApprove,
   onDecide,
   onSave,
+  onFindProspects,
 }: {
   icp: ReviewIcp;
   productName: string;
   onApprove?: (id: string) => Promise<{ error?: string }>;
+  onFindProspects?: (
+    id: string,
+  ) => Promise<{ error?: string } | void>;
   onDecide?: (input: {
     icpId: string;
     suggestionId: string;
@@ -87,20 +91,32 @@ export function IcpReviewScreen({
           </p>
           <h1 className="font-serif mt-2 text-3xl tracking-tight">{structured.name}</h1>
         </div>
-        {icp.status === "DRAFT" && onApprove ? (
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => run(() => onApprove(icp.id))}
-            className="rounded-md bg-[var(--foreground)] px-4 py-2 text-sm text-[var(--background)] disabled:opacity-50"
-          >
-            Approve ICP
-          </button>
-        ) : (
-          <span className="rounded-full border border-[var(--rule)] px-3 py-1 text-xs uppercase">
-            {icp.status}
-          </span>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {icp.status === "DRAFT" && onApprove ? (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => run(() => onApprove(icp.id))}
+              className="rounded-md bg-[var(--foreground)] px-4 py-2 text-sm text-[var(--background)] disabled:opacity-50"
+            >
+              Approve ICP
+            </button>
+          ) : (
+            <span className="rounded-full border border-[var(--rule)] px-3 py-1 text-xs uppercase">
+              {icp.status}
+            </span>
+          )}
+          {icp.status === "APPROVED" && onFindProspects ? (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => run(() => onFindProspects(icp.id))}
+              className="rounded-md bg-[var(--foreground)] px-4 py-2 text-sm text-[var(--background)] disabled:opacity-50"
+            >
+              Find prospects
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {onSave ? (

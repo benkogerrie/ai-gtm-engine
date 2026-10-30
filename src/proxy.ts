@@ -10,7 +10,9 @@ export function proxy(request: NextRequest) {
   const needsAuth =
     pathname === "/intake" ||
     pathname.startsWith("/intake/") ||
-    pathname.startsWith("/icp/");
+    pathname.startsWith("/icp/") ||
+    pathname === "/prospects" ||
+    pathname.startsWith("/prospects/");
   if (!needsAuth) {
     return NextResponse.next();
   }
@@ -27,5 +29,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/intake", "/intake/:path*", "/icp/:path*"],
+  matcher: ["/intake", "/intake/:path*", "/icp/:path*", "/prospects", "/prospects/:path*"],
 };

@@ -28,6 +28,12 @@ export function AppShell({
             >
               Intake
             </Link>
+            <Link
+              href="/prospects"
+              className="text-xs tracking-wide text-[var(--muted)] uppercase hover:text-[var(--foreground)]"
+            >
+              Prospects
+            </Link>
             {showLogout ? (
               <form action={logoutAction}>
                 <button

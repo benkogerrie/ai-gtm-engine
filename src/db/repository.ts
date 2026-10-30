@@ -145,14 +145,6 @@ export async function createOrganization(
   );
 }
 
-export async function getOrganization(db: AppDatabase, id: string) {
-  const [row] = await db
-    .select()
-    .from(organizations)
-    .where(eq(organizations.id, id));
-  return row ?? null;
-}
-
 export async function createProduct(
   db: AppDatabase,
   raw: CreateProductInput,

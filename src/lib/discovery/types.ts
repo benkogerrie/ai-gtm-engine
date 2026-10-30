@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { uuidSchema } from "@/domain";
 
 /**
  * Adapter-friendly ICP slice for discovery.
@@ -20,6 +21,7 @@ export const discoveryInputSchema = z.object({
   personas: z.array(z.string().min(1)).optional(),
   triggers: z.array(z.string().min(1)).optional(),
   excludeDomains: z.array(z.string().min(1)).optional(),
+  icpId: uuidSchema.optional(),
 });
 export type DiscoveryInput = z.infer<typeof discoveryInputSchema>;
 
@@ -83,6 +85,7 @@ export type CompetitorCategoryInsight = z.infer<
 export const discoveryRunSnapshotSchema = z.object({
   id: z.string().min(1),
   orgId: z.string().min(1),
+  icpId: uuidSchema.optional(),
   status: discoveryRunStatusSchema,
   mode: discoveryModeSchema,
   input: discoveryInputSchema,
