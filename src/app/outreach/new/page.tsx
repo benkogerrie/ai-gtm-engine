@@ -52,6 +52,14 @@ async function NewOutreachBody({ companyId }: { companyId: string | undefined })
         {SELLER_PRODUCT.name} ({SELLER_PRODUCT.description}) → {collected.companyName}.
         Drafts stay gated: approve / edit / reject, then dry-run only.
       </p>
+      <p className="mt-2 flex flex-wrap gap-4 text-sm text-[var(--muted)]">
+        <Link href="/prospects" className="underline">
+          Back to prospects
+        </Link>
+        <Link href="/dashboard" className="underline">
+          Dashboard
+        </Link>
+      </p>
       <DraftOutreachForm
         companyId={companyId}
         companyName={collected.companyName}

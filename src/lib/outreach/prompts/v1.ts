@@ -1,16 +1,17 @@
+import { isLabeledDemo } from "../meta";
 import { SELLER_PRODUCT } from "../product";
 import type { CitedSignal, OutreachCta, OutreachTone } from "../schema";
 
 export const OUTREACH_PROMPT_VERSION = "v1";
 
 export const OUTREACH_JSON_EXAMPLE = `{
-  "emailSubject": "TEST note after Example General Hospital listed a night-shift role",
-  "emailBody": "Hello team at TEST — Example General Hospital,\\n\\nI noticed the nurse staffing / night-shift scheduling role on https://example.com. ShiftPilot is AI shift scheduling for hospitals — we help staffing teams cut overtime without a real send from this draft.\\n\\nWould you book a short call this week?\\n\\n— ShiftPilot (labeled TEST draft)",
-  "linkedinMessage": "Saw TEST — Example General Hospital's night-shift scheduling role on https://example.com. Open to a brief chat about ShiftPilot?",
+  "emailSubject": "Nurse scheduling note after Ochsner listed a night-shift role",
+  "emailBody": "Hello team at Ochsner Health,\\n\\nI noticed the nurse staffing / night-shift scheduling role on the cited source URL. ShiftPilot is AI shift scheduling for hospitals — we help staffing teams cut overtime.\\n\\nWould you book a short call this week?\\n\\n— ShiftPilot",
+  "linkedinMessage": "Saw Ochsner Health's night-shift scheduling role on the cited URL. Open to a brief chat about ShiftPilot?",
   "tone": "professional",
   "cta": "book a call",
   "citedSignalIds": ["11111111-1111-4111-8111-111111111111"],
-  "sourceUrls": ["https://example.com"]
+  "sourceUrls": ["https://news.ochsner.org/news-releases/example"]
 }`;
 
 export const OUTREACH_SYSTEM_PROMPT = `You write a short, signal-grounded B2B outreach draft for ${SELLER_PRODUCT.name} (${SELLER_PRODUCT.description}).
@@ -31,6 +32,7 @@ Field rules:
 - Never invent people, emails, phone numbers, or real-looking companies.
 - Keep the email under 160 words. Keep the LinkedIn message under 300 characters.
 - The draft is never sent. Do not claim you already emailed anyone.
+- Sign off as "${SELLER_PRODUCT.name}" only. Write "labeled TEST draft", TEST/MOCK, or EXAMPLE ONLY when the user message marks the prospect as a labeled TEST/EXAMPLE demo. Never add that wording for a real company.
 `;
 
 export function buildOutreachUserPrompt(input: {
@@ -51,6 +53,14 @@ export function buildOutreachUserPrompt(input: {
     `Seller product: ${SELLER_PRODUCT.name} — ${SELLER_PRODUCT.description}`,
     `Prospect company name: ${input.companyName}`,
     `Prospect company domain: ${input.companyDomain ?? "(unknown)"}`,
+    `Prospect label: ${
+      isLabeledDemo({
+        companyName: input.companyName,
+        companyDomain: input.companyDomain,
+      })
+        ? "labeled TEST / EXAMPLE demo — TEST wording is allowed"
+        : "REAL company — do not write TEST, MOCK, EXAMPLE, or labeled TEST draft"
+    }`,
     `Tone (literal enum): ${input.tone}`,
     `CTA (literal enum): ${input.cta}`,
     "",

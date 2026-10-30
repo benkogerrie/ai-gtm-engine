@@ -11,6 +11,9 @@ import {
   type DiscoveryRunSnapshot,
 } from "@/lib/discovery";
 import { DraftOutreachButton } from "@/components/draft-outreach-button";
+import { EvidenceLabelBadge, EvidenceLegend } from "@/components/evidence-label";
+import { labelDiscoveryClaim } from "@/lib/discovery/labels";
+import { aggregateByOrganization } from "@/lib/discovery/names";
 import { ProspectsForm } from "./prospects-form";
 
 export const maxDuration = 60;
@@ -51,6 +54,7 @@ function uniqueSources(
     url: string;
     title: string;
     domain: string;
+    field: string;
   }> = [];
   for (const claim of claims) {
     if (seen.has(claim.sourceUrl)) {
@@ -66,7 +70,7 @@ function uniqueSources(
       }
     }
     const title = claim.sourceTitle?.trim() || domain;
-    sources.push({ url: claim.sourceUrl, title, domain });
+    sources.push({ url: claim.sourceUrl, title, domain, field: claim.field });
   }
   return sources;
 }
@@ -95,7 +99,7 @@ function RunPanel({ run }: { run: DiscoveryRunSnapshot }) {
         </p>
       ) : null}
 
-      {run.prospects.length === 0 ? (
+      {aggregateByOrganization(run.prospects).length === 0 ? (
         <p className="mt-6 rounded-lg border border-[var(--rule)] bg-[var(--card)] p-5 text-sm text-[var(--muted)]">
           {run.status === "failed"
             ? "This run failed. The live DeepSeek path does not silently fall back to a heuristic."
@@ -115,7 +119,7 @@ function RunPanel({ run }: { run: DiscoveryRunSnapshot }) {
               </tr>
             </thead>
             <tbody>
-              {run.prospects.map((prospect) => (
+              {aggregateByOrganization(run.prospects).map((prospect) => (
                 <tr
                   key={prospect.companyId ?? `${prospect.name}-${prospect.domain}`}
                   className="border-b border-[var(--rule)] last:border-b-0 align-top"
@@ -145,10 +149,19 @@ function RunPanel({ run }: { run: DiscoveryRunSnapshot }) {
                     ) : null}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    {prospect.fitScore}
+                    <p>{prospect.fitScore}</p>
+                    <EvidenceLabelBadge label="INFERRED" />
+                    {prospect.evidenceRelevance ? (
+                      <p className="mt-1 text-[10px] tracking-wide text-[var(--muted)] uppercase">
+                        {prospect.evidenceRelevance} evidence
+                      </p>
+                    ) : null}
                   </td>
                   <td className="px-4 py-3">
                     <p>{prospect.rationale}</p>
+                    <div className="mt-1">
+                      <EvidenceLabelBadge label="INFERRED" />
+                    </div>
                     {prospect.signals.length > 0 ? (
                       <ul className="mt-2 list-disc pl-4 text-xs text-[var(--muted)]">
                         {prospect.signals.map((signal) => (
@@ -173,7 +186,13 @@ function RunPanel({ run }: { run: DiscoveryRunSnapshot }) {
                             {source.domain && source.title !== source.domain
                               ? ` · ${source.domain}`
                               : ""}
-                          </a>
+                          </a>{" "}
+                          <EvidenceLabelBadge
+                            label={labelDiscoveryClaim({
+                              field: source.field,
+                              sourceUrl: source.url,
+                            })}
+                          />
                         </li>
                       ))}
                     </ul>
@@ -285,7 +304,11 @@ export default function ProspectsPage({
       <p className="mt-4 max-w-2xl text-[var(--muted)]">
         From an approved ICP, search live public sources for named buyer
         organizations. Only claims that cite a result URL from this run are kept.
+        Duplicate rows for the same organization are collapsed.
       </p>
+      <div className="mt-4">
+        <EvidenceLegend />
+      </div>
       <div className="mt-10">
         <Suspense
           fallback={

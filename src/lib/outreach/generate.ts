@@ -6,6 +6,7 @@ import {
 } from "@/lib/llm";
 import { createLlmClient, isLlmConfigured } from "@/lib/llm";
 import { createMockLlmClient } from "@/lib/llm";
+import { sanitizeOutreachDraftCopy } from "./demo-wording";
 import { isLabeledDemo } from "./meta";
 import { buildMockOutreachDraft } from "./mock-output";
 import { llmOutreachDraftNormalizedSchema } from "./normalize";
@@ -125,10 +126,13 @@ export async function generateOutreachDraft(
 
   try {
     const result = await client.json(llmOutreachDraftNormalizedSchema, messages);
-    const grounded = groundDraft(result.data, input.cited, {
-      tone: input.tone,
-      cta: input.cta,
-    });
+    const grounded = sanitizeOutreachDraftCopy(
+      groundDraft(result.data, input.cited, {
+        tone: input.tone,
+        cta: input.cta,
+      }),
+      input,
+    );
     return {
       draft: grounded,
       inferenceMode: client.provider === "mock" ? "mock" : "live",

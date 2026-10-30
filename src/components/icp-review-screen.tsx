@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { StructuredIcp } from "@/domain";
 
 export type ReviewIcp = {
@@ -115,6 +116,14 @@ export function IcpReviewScreen({
             >
               Find prospects
             </button>
+          ) : null}
+          {icp.status === "APPROVED" ? (
+            <Link
+              href={`/dashboard?icp=${icp.id}`}
+              className="rounded-md border border-[var(--rule)] px-4 py-2 text-sm"
+            >
+              Dashboard
+            </Link>
           ) : null}
         </div>
       </div>

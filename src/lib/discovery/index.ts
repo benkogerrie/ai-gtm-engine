@@ -1,7 +1,9 @@
 export { discoveryInputFromIcp } from "./adapter";
 export { getDiscoveryPageAuth } from "./page-auth";
+export { aggregateByOrganization, companiesMatchOrganization } from "./names";
 export { runDiscovery, createDiscoveryClients, isDiscoveryConfigured } from "./pipeline";
 export { buildDiscoveryQueries, buildCompetitorQuery, isHealthcareIcp } from "./queries";
+export { prospectEvidenceRelevance, classifyEvidenceText } from "./relevance";
 export {
   getDiscoveryRun,
   listDiscoveryRuns,

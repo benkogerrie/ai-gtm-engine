@@ -14,13 +14,31 @@ export function HomePage() {
               href="/intake"
               className="text-xs tracking-wide text-[var(--muted)] uppercase hover:text-[var(--foreground)]"
             >
-              Product intake
+              Intake
+            </Link>
+            <Link
+              href="/icp"
+              className="text-xs tracking-wide text-[var(--muted)] uppercase hover:text-[var(--foreground)]"
+            >
+              ICP
+            </Link>
+            <Link
+              href="/prospects"
+              className="text-xs tracking-wide text-[var(--muted)] uppercase hover:text-[var(--foreground)]"
+            >
+              Prospects
             </Link>
             <Link
               href="/outreach"
               className="text-xs tracking-wide text-[var(--muted)] uppercase hover:text-[var(--foreground)]"
             >
               Outreach
+            </Link>
+            <Link
+              href="/dashboard"
+              className="text-xs tracking-wide text-[var(--muted)] uppercase hover:text-[var(--foreground)]"
+            >
+              Dashboard
             </Link>
           </div>
         </div>
@@ -55,7 +73,11 @@ export function HomePage() {
                   ? "/prospects"
                   : productModule.name === "Intake & ICP"
                     ? "/intake"
-                    : undefined;
+                    : productModule.name === "Pipeline Dashboard"
+                      ? "/dashboard"
+                    : productModule.name === "Enrichment & Outreach"
+                      ? "/outreach"
+                      : undefined;
               return (
                 <li
                   key={productModule.name}

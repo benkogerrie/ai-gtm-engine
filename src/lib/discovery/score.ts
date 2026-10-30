@@ -1,5 +1,10 @@
 import { cleanText } from "./html";
-import type { DiscoveryCandidate, DiscoveryInput } from "./types";
+import {
+  capFitForRelevance,
+  classifyEvidenceText,
+  prospectEvidenceRelevance,
+} from "./relevance";
+import type { DiscoveryCandidate, DiscoveryInput, EvidenceRelevance } from "./types";
 
 function mentions(haystack: string, needles: string[] | undefined): boolean {
   if (!needles?.length) {
@@ -15,7 +20,7 @@ function mentions(haystack: string, needles: string[] | undefined): boolean {
 export function scoreProspect(
   candidate: DiscoveryCandidate,
   input: DiscoveryInput,
-): { fitScore: number; rationale: string } {
+): { fitScore: number; rationale: string; evidenceRelevance: EvidenceRelevance } {
   const blob = [
     candidate.name,
     candidate.domain,
@@ -24,11 +29,22 @@ export function scoreProspect(
     ...candidate.signals.map((signal) => signal.summary),
   ].join(" ");
 
+  const evidenceRelevance = prospectEvidenceRelevance(candidate);
   let fitScore = 48;
   const reasons: string[] = [];
 
+  if (evidenceRelevance === "strong") {
+    fitScore += 14;
+    reasons.push("strong cited evidence of nurse/shift scheduling or staffing");
+  } else {
+    fitScore -= 14;
+    reasons.push(
+      "peripheral-only coverage (nursing/hospital mention without scheduling or staffing operations)",
+    );
+  }
+
   if (mentions(blob, input.industries)) {
-    fitScore += 18;
+    fitScore += evidenceRelevance === "strong" ? 18 : 6;
     reasons.push("industry terms appear in cited sources");
   }
   if (mentions(blob, input.geographies)) {
@@ -55,19 +71,20 @@ export function scoreProspect(
     reasons.push("buying-signal snippet present");
   }
 
-  fitScore = Math.max(0, Math.min(100, fitScore));
+  fitScore = capFitForRelevance(fitScore, evidenceRelevance);
   const rationale = cleanText(
     reasons.length > 0
-      ? `${candidate.whyFit} Score ${fitScore}: ${reasons.join("; ")}.`
+      ? `${candidate.whyFit} Score ${fitScore} (${evidenceRelevance}): ${reasons.join("; ")}.`
       : candidate.whyFit,
     400,
   );
-  return { fitScore, rationale };
+  return { fitScore, rationale, evidenceRelevance };
 }
 
 export function scoreFromLlm(candidate: DiscoveryCandidate): {
   fitScore: number;
   rationale: string;
+  evidenceRelevance: EvidenceRelevance;
 } | null {
   if (
     typeof candidate.fitScore !== "number" ||
@@ -76,9 +93,17 @@ export function scoreFromLlm(candidate: DiscoveryCandidate): {
   ) {
     return null;
   }
+  const evidenceRelevance = prospectEvidenceRelevance(candidate);
   return {
-    fitScore: Math.max(0, Math.min(100, Math.round(candidate.fitScore))),
-    rationale: cleanText(candidate.rationale, 400),
+    fitScore: capFitForRelevance(candidate.fitScore, evidenceRelevance),
+    rationale: cleanText(
+      evidenceRelevance === "peripheral" &&
+        !/peripheral/i.test(candidate.rationale)
+        ? `${candidate.rationale} Evidence relevance: peripheral (no direct nurse/shift scheduling or staffing operations).`
+        : candidate.rationale,
+      400,
+    ),
+    evidenceRelevance,
   };
 }
 
@@ -91,3 +116,5 @@ export function fitTierFromScore(fitScore: number): "A" | "B" | "C" {
   }
   return "C";
 }
+
+export { classifyEvidenceText, prospectEvidenceRelevance };

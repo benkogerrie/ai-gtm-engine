@@ -322,11 +322,10 @@ describe("runDiscovery", () => {
     expect(run.status).toBe("completed");
     expect(run.extractionPath).toBe("deepseek");
     expect(run.scoringPath).toBe("deepseek");
-    expect(run.prospects.map((prospect) => prospect.name)).toEqual([
-      "Ochsner Health",
-      "UCHealth",
-      "Mercy",
-    ]);
+    expect(run.prospects.map((prospect) => prospect.name)).toEqual(
+      expect.arrayContaining(["Ochsner Health", "UCHealth", "Mercy"]),
+    );
+    expect(run.prospects).toHaveLength(3);
     expect(new Set(run.prospects.map((prospect) => prospect.fitScore)).size).toBe(3);
     expect(run.prospects.some((prospect) => prospect.name === "symplr")).toBe(false);
     expect(

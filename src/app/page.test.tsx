@@ -21,7 +21,7 @@ describe("Home page", () => {
     }
 
     expect(screen.getAllByText("Coming soon")).toHaveLength(
-      PRODUCT_MODULES.length - 2,
+      PRODUCT_MODULES.length - 4,
     );
     expect(screen.getByRole("link", { name: "Discovery" })).toHaveAttribute(
       "href",
@@ -31,5 +31,11 @@ describe("Home page", () => {
       "href",
       "/intake",
     );
+    expect(
+      screen.getByRole("link", { name: "Pipeline Dashboard" }),
+    ).toHaveAttribute("href", "/dashboard");
+    expect(
+      screen.getByRole("link", { name: "Enrichment & Outreach" }),
+    ).toHaveAttribute("href", "/outreach");
   });
 });

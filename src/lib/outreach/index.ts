@@ -9,6 +9,7 @@ export {
   isTestProspect,
   OUTREACH_PROMPT_VERSION,
 } from "./generate";
+export { sanitizeOutreachDraftCopy, stripDemoWording } from "./demo-wording";
 export { isLabeledDemo, parseOutreachMeta, serializeOutreachMeta } from "./meta";
 export { buildMockOutreachDraft } from "./mock-output";
 export {

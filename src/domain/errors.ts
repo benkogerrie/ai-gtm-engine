@@ -16,6 +16,7 @@ export const DOMAIN_ERROR_CODES = [
   "OUTREACH_ORG_MISMATCH",
   "OUTREACH_NOT_APPROVED",
   "HUMAN_ACTOR_REQUIRED",
+  "PIPELINE_STAGE_UNAVAILABLE",
 ] as const;
 
 export type DomainErrorCode = (typeof DOMAIN_ERROR_CODES)[number];
