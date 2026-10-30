@@ -74,7 +74,7 @@ export function OutreachDetail({
 
   return (
     <div className="space-y-8">
-      {view.labeledTest || view.inferenceMode === "mock" ? (
+      {view.labeledTest ? (
         <p
           data-testid="mock-banner"
           className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm"

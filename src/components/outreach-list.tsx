@@ -197,7 +197,7 @@ export function OutreachList({
                 >
                   {row.companyName ?? "Unknown company"}
                 </Link>
-                {row.labeledTest || row.inferenceMode === "mock" ? (
+                {row.labeledTest ? (
                   <span className="rounded-full border border-amber-300 px-2 py-0.5 text-[10px] tracking-[0.14em] uppercase">
                     TEST / MOCK
                   </span>

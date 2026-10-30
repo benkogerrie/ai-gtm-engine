@@ -1,6 +1,12 @@
-import { isLlmError, LlmInvalidJsonError, type LlmClient } from "@/lib/llm";
+import {
+  isLlmError,
+  LlmInvalidJsonError,
+  LlmMissingApiKeyError,
+  type LlmClient,
+} from "@/lib/llm";
 import { createLlmClient, isLlmConfigured } from "@/lib/llm";
 import { createMockLlmClient } from "@/lib/llm";
+import { isLabeledDemo } from "./meta";
 import { buildMockOutreachDraft } from "./mock-output";
 import { llmOutreachDraftNormalizedSchema } from "./normalize";
 import {
@@ -45,12 +51,27 @@ export function groundDraft(
   };
 }
 
-export function createOutreachLlmClient(): {
+export function isTestProspect(input: {
+  companyName?: string | null;
+  companyDomain?: string | null;
+}): boolean {
+  return isLabeledDemo({
+    companyName: input.companyName,
+    companyDomain: input.companyDomain,
+  });
+}
+
+export function createOutreachLlmClient(options: { requireLive?: boolean } = {}): {
   client: LlmClient;
   mode: "live" | "mock";
 } {
   if (isLlmConfigured()) {
     return { client: createLlmClient(), mode: "live" };
+  }
+  if (options.requireLive) {
+    throw new LlmMissingApiKeyError(
+      "Live DeepSeek is required for outreach to real (non-TEST) companies. Set DEEPSEEK_API_KEY.",
+    );
   }
   return {
     client: createMockLlmClient({

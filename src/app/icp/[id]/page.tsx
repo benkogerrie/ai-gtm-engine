@@ -6,6 +6,7 @@ import {
   decideExpansionAction,
   saveIcpEditsAction,
 } from "@/app/actions/icp";
+import { startDiscoveryFromIcpAction } from "@/app/prospects/actions";
 import { AppShell } from "@/components/app-shell";
 import { IcpReviewScreen } from "@/components/icp-review-screen";
 import { getDb } from "@/db/client";
@@ -40,6 +41,7 @@ async function IcpBody({ id }: { id: string }) {
         }}
         productName={loaded.product.name}
         onApprove={approveIcpAction}
+        onFindProspects={startDiscoveryFromIcpAction}
         onDecide={decideExpansionAction}
         onSave={saveIcpEditsAction}
       />

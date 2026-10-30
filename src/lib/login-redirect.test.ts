@@ -13,12 +13,28 @@ describe("safeLoginRedirect", () => {
     ).toBe("/icp/11111111-1111-4111-8111-111111111111?tab=exp");
   });
 
+  it("allows prospects and outreach paths including query strings", () => {
+    expect(safeLoginRedirect("/prospects")).toBe("/prospects");
+    expect(
+      safeLoginRedirect("/prospects?icp=11111111-1111-4111-8111-111111111111&runId=9c1d74d6"),
+    ).toBe("/prospects?icp=11111111-1111-4111-8111-111111111111&runId=9c1d74d6");
+    expect(safeLoginRedirect("/outreach")).toBe("/outreach");
+    expect(
+      safeLoginRedirect("/outreach/11111111-1111-4111-8111-111111111111"),
+    ).toBe("/outreach/11111111-1111-4111-8111-111111111111");
+    expect(
+      safeLoginRedirect("/outreach/new?companyId=11111111-1111-4111-8111-111111111111"),
+    ).toBe("/outreach/new?companyId=11111111-1111-4111-8111-111111111111");
+  });
+
   it("falls back for missing or non-allowlisted targets", () => {
     expect(safeLoginRedirect(undefined)).toBe("/intake");
     expect(safeLoginRedirect("")).toBe("/intake");
     expect(safeLoginRedirect("/")).toBe("/intake");
     expect(safeLoginRedirect("/login")).toBe("/intake");
     expect(safeLoginRedirect("intake")).toBe("/intake");
+    expect(safeLoginRedirect("/prospects-evil")).toBe("/intake");
+    expect(safeLoginRedirect("/outreach-evil")).toBe("/intake");
   });
 
   it("rejects protocol-relative, schemes, backslashes, and control chars", () => {

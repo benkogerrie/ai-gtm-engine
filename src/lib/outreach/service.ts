@@ -13,7 +13,11 @@ import {
 } from "@/db/repository";
 import type { LlmClient } from "@/lib/llm";
 import { assertHasCitedSignals, collectCitedSignals } from "./cited";
-import { createOutreachLlmClient, generateOutreachDraft } from "./generate";
+import {
+  createOutreachLlmClient,
+  generateOutreachDraft,
+  isTestProspect,
+} from "./generate";
 import { isLabeledDemo, parseOutreachMeta, serializeOutreachMeta } from "./meta";
 import { seedDemoCompany } from "./seed";
 import type {
@@ -199,7 +203,14 @@ export async function draftOutreachForCompany(
   const collected = await collectCitedSignals(db, input.companyId, ctx.orgId);
   assertHasCitedSignals(collected.cited);
 
-  const llmClient = client ?? createOutreachLlmClient().client;
+  const llmClient =
+    client ??
+    createOutreachLlmClient({
+      requireLive: !isTestProspect({
+        companyName: collected.companyName,
+        companyDomain: collected.companyDomain,
+      }),
+    }).client;
 
   const generated = await generateOutreachDraft(llmClient, {
     companyName: collected.companyName,
@@ -332,7 +343,14 @@ export async function regenerateOutreach(
   const collected = await collectCitedSignals(db, current.companyId, ctx.orgId);
   assertHasCitedSignals(collected.cited);
 
-  const llmClient = client ?? createOutreachLlmClient().client;
+  const llmClient =
+    client ??
+    createOutreachLlmClient({
+      requireLive: !isTestProspect({
+        companyName: collected.companyName,
+        companyDomain: collected.companyDomain,
+      }),
+    }).client;
   const generated = await generateOutreachDraft(llmClient, {
     companyName: collected.companyName,
     companyDomain: collected.companyDomain,

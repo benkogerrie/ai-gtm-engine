@@ -6,6 +6,7 @@ export {
   createOutreachLlmClient,
   generateOutreachDraft,
   groundDraft,
+  isTestProspect,
   OUTREACH_PROMPT_VERSION,
 } from "./generate";
 export { isLabeledDemo, parseOutreachMeta, serializeOutreachMeta } from "./meta";

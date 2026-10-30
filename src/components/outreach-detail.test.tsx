@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 import { OutreachDetail, type OutreachDetailView } from "./outreach-detail";
 
 const draftView: OutreachDetailView = {
@@ -37,6 +37,10 @@ const draftView: OutreachDetailView = {
 };
 
 describe("OutreachDetail", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   it("shows TEST/MOCK labels, cited source URL, and disables dry-run until approved", () => {
     render(
       <OutreachDetail
@@ -52,5 +56,22 @@ describe("OutreachDetail", () => {
     ).toHaveAttribute("href", "https://example.com");
     expect(screen.getByTestId("dry-run-button")).toBeDisabled();
     expect(screen.getByRole("button", { name: /^approve$/i })).toBeInTheDocument();
+  });
+
+  it("does not show a MOCK banner for a live draft of a real hospital", () => {
+    render(
+      <OutreachDetail
+        view={{
+          ...draftView,
+          companyName: "Ochsner Health",
+          companyDomain: "ochsner.org",
+          inferenceMode: "live",
+          demo: false,
+          labeledTest: false,
+        }}
+      />,
+    );
+
+    expect(screen.queryByTestId("mock-banner")).not.toBeInTheDocument();
   });
 });

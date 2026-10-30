@@ -11,6 +11,8 @@ export function proxy(request: NextRequest) {
     pathname === "/intake" ||
     pathname.startsWith("/intake/") ||
     pathname.startsWith("/icp/") ||
+    pathname === "/prospects" ||
+    pathname.startsWith("/prospects/") ||
     pathname === "/outreach" ||
     pathname.startsWith("/outreach/");
   if (!needsAuth) {
@@ -29,5 +31,13 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/intake", "/intake/:path*", "/icp/:path*", "/outreach", "/outreach/:path*"],
+  matcher: [
+    "/intake",
+    "/intake/:path*",
+    "/icp/:path*",
+    "/prospects",
+    "/prospects/:path*",
+    "/outreach",
+    "/outreach/:path*",
+  ],
 };
