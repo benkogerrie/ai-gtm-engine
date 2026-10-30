@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { PRODUCT_MODULES } from "@/lib/modules";
 
 export function HomePage() {
@@ -35,24 +36,36 @@ export function HomePage() {
           </div>
 
           <ul className="mt-8 grid gap-4 sm:grid-cols-2">
-            {PRODUCT_MODULES.map((productModule, index) => (
-              <li
-                key={productModule.name}
-                className={`rounded-lg border border-[var(--rule)] bg-[var(--card)] p-5 ${
-                  index === PRODUCT_MODULES.length - 1 ? "sm:col-span-2" : ""
-                }`}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <h3 className="font-serif text-xl tracking-tight">{productModule.name}</h3>
-                  <span className="shrink-0 rounded-full border border-[var(--rule)] px-2 py-0.5 text-[10px] tracking-[0.14em] text-[var(--muted)] uppercase">
-                    Coming soon
-                  </span>
-                </div>
-                <p className="mt-3 max-w-xl text-sm leading-relaxed text-[var(--muted)]">
-                  {productModule.summary}
-                </p>
-              </li>
-            ))}
+            {PRODUCT_MODULES.map((productModule, index) => {
+              const href =
+                productModule.name === "Discovery" ? "/prospects" : undefined;
+              return (
+                <li
+                  key={productModule.name}
+                  className={`rounded-lg border border-[var(--rule)] bg-[var(--card)] p-5 ${
+                    index === PRODUCT_MODULES.length - 1 ? "sm:col-span-2" : ""
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <h3 className="font-serif text-xl tracking-tight">
+                      {href ? (
+                        <Link href={href} className="underline-offset-4 hover:underline">
+                          {productModule.name}
+                        </Link>
+                      ) : (
+                        productModule.name
+                      )}
+                    </h3>
+                    <span className="shrink-0 rounded-full border border-[var(--rule)] px-2 py-0.5 text-[10px] tracking-[0.14em] text-[var(--muted)] uppercase">
+                      {href ? "Open" : "Coming soon"}
+                    </span>
+                  </div>
+                  <p className="mt-3 max-w-xl text-sm leading-relaxed text-[var(--muted)]">
+                    {productModule.summary}
+                  </p>
+                </li>
+              );
+            })}
           </ul>
         </section>
       </main>

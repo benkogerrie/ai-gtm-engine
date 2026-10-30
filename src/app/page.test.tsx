@@ -20,6 +20,12 @@ describe("Home page", () => {
       ).toBeInTheDocument();
     }
 
-    expect(screen.getAllByText("Coming soon")).toHaveLength(PRODUCT_MODULES.length);
+    expect(screen.getAllByText("Coming soon")).toHaveLength(
+      PRODUCT_MODULES.length - 1,
+    );
+    expect(screen.getByRole("link", { name: "Discovery" })).toHaveAttribute(
+      "href",
+      "/prospects",
+    );
   });
 });

@@ -34,9 +34,9 @@ Open [http://localhost:3000](http://localhost:3000). Health check: [http://local
 
 `.env.example` lists empty placeholders. `DATABASE_URL=` is intentionally blank so local/dev/test use in-process [PGlite](https://pglite.dev) (no Docker, no secrets). Set `DATABASE_URL` later for a real Postgres (for example on Vercel). Optional `PGLITE_DATA_DIR` overrides the default `.pglite/` data directory used by `pnpm db:migrate`.
 
-Data APIs (`/api/products`, `/api/companies/*`, `/api/citations`, `/api/audit`) require `Authorization: Bearer $APP_API_TOKEN`. Org and actor are mapped server-side from `APP_ORG_ID` / `APP_ACTOR_ID` / `APP_ACTOR_TYPE` — never from the request. Leave those placeholders empty in the repo. `/api/health` stays public.
+Data APIs (`/api/products`, `/api/companies/*`, `/api/citations`, `/api/audit`, `/api/discovery/runs`) require `Authorization: Bearer $APP_API_TOKEN`. Org and actor are mapped server-side from `APP_ORG_ID` / `APP_ACTOR_ID` / `APP_ACTOR_TYPE` — never from the request. Leave those placeholders empty in the repo. `/api/health` stays public.
 
-LLM usage (DeepSeek) is documented in [`docs/llm.md`](./docs/llm.md). Search usage (Brave) is documented in [`docs/search.md`](./docs/search.md). Domain model, evidence ledger, and verification rules: [docs/domain-model.md](./docs/domain-model.md).
+LLM usage (DeepSeek) is documented in [`docs/llm.md`](./docs/llm.md). Search usage (Brave) is documented in [`docs/search.md`](./docs/search.md). Live discovery: [`docs/discovery.md`](./docs/discovery.md) and [`/prospects`](./src/app/prospects/page.tsx). Domain model, evidence ledger, and verification rules: [docs/domain-model.md](./docs/domain-model.md).
 
 Do not put real secrets in the repository.
 
