@@ -36,7 +36,6 @@ export function isLabeledDemo(input: {
     name.includes("MOCK") ||
     domain === "example.com" ||
     domain.endsWith(".example") ||
-    input.inferenceMode === "mock" ||
     Boolean(input.demoLabel)
   );
 }

@@ -38,6 +38,7 @@ No `0003_*` migration. Run snapshots live in `audit_events.after` (`discovery.ru
 
 - `/login` → `/intake` → `/icp/[id]`. When the ICP is **APPROVED**, **Find prospects** builds `DiscoveryInput` from that ICP and starts a run.
 - Results land on `/prospects?icp=<id>&runId=<run>`.
+- Each persisted buyer has a **Draft outreach** link to `/outreach/new?companyId=`. Real (non-TEST) companies use live DeepSeek and never get a MOCK label.
 - `/prospects` also has a manual ShiftPilot-prefilled form.
 
 ## Tests

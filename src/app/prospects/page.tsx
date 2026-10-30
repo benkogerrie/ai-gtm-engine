@@ -10,6 +10,7 @@ import {
   listDiscoveryRuns,
   type DiscoveryRunSnapshot,
 } from "@/lib/discovery";
+import { DraftOutreachButton } from "@/components/draft-outreach-button";
 import { ProspectsForm } from "./prospects-form";
 
 export const maxDuration = 60;
@@ -136,6 +137,11 @@ function RunPanel({ run }: { run: DiscoveryRunSnapshot }) {
                           {prospect.domain}
                         </p>
                       )
+                    ) : null}
+                    {prospect.companyId ? (
+                      <div className="mt-2">
+                        <DraftOutreachButton companyId={prospect.companyId} />
+                      </div>
                     ) : null}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">

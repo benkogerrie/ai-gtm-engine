@@ -33,6 +33,12 @@ function isAllowlisted(pathname: string): boolean {
   if (pathname === "/intake" || pathname.startsWith("/intake/")) {
     return true;
   }
+  if (pathname === "/prospects" || pathname.startsWith("/prospects/")) {
+    return true;
+  }
+  if (pathname === "/outreach" || pathname.startsWith("/outreach/")) {
+    return true;
+  }
   return /^\/icp\/[^/]+/.test(pathname);
 }
 
