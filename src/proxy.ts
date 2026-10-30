@@ -10,7 +10,9 @@ export function proxy(request: NextRequest) {
   const needsAuth =
     pathname === "/intake" ||
     pathname.startsWith("/intake/") ||
-    pathname.startsWith("/icp/");
+    pathname.startsWith("/icp/") ||
+    pathname === "/outreach" ||
+    pathname.startsWith("/outreach/");
   if (!needsAuth) {
     return NextResponse.next();
   }
@@ -22,10 +24,10 @@ export function proxy(request: NextRequest) {
   }
 
   const login = new URL("/login", request.url);
-  login.searchParams.set("next", pathname);
+  login.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
   return NextResponse.redirect(login);
 }
 
 export const config = {
-  matcher: ["/intake", "/intake/:path*", "/icp/:path*"],
+  matcher: ["/intake", "/intake/:path*", "/icp/:path*", "/outreach", "/outreach/:path*"],
 };

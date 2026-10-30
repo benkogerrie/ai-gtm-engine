@@ -28,6 +28,12 @@ export function AppShell({
             >
               Intake
             </Link>
+            <Link
+              href="/outreach"
+              className="text-xs tracking-wide text-[var(--muted)] uppercase hover:text-[var(--foreground)]"
+            >
+              Outreach
+            </Link>
             {showLogout ? (
               <form action={logoutAction}>
                 <button
