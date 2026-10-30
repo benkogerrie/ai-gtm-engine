@@ -10,9 +10,8 @@ import {
   EvidenceLegend,
   EvidenceRelevanceBadge,
 } from "@/components/evidence-label";
-import { Button } from "@/components/ui/button";
+import { IcpRunPicker } from "@/components/icp-run-picker";
 import { Card, CardContent } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -24,60 +23,18 @@ import {
 import { getDb } from "@/db/client";
 import { loadDashboard } from "@/lib/pipeline";
 import { getPageAuth } from "@/lib/session";
-import { DashboardBoard } from "./dashboard-board";
 
 export const instant = false;
 
-const selectClass =
-  "mt-1 flex h-9 rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
-
-function IcpPicker({
-  snapshotIcpId,
-  snapshotRunId,
-  icps,
-  runs,
-}: {
-  snapshotIcpId: string | undefined;
-  snapshotRunId: string | undefined;
-  icps: Array<{ id: string; name: string; status: string }>;
-  runs: Array<{ id: string; status: string; updatedAt: string; prospectCount: number }>;
-}) {
-  return (
-    <form className="flex flex-wrap items-end gap-3" method="get">
-      <Label>
-        <span className="text-muted-foreground">ICP</span>
-        <select name="icp" defaultValue={snapshotIcpId ?? ""} className={selectClass}>
-          {icps.length === 0 ? (
-            <option value="">No ICPs yet</option>
-          ) : (
-            icps.map((icp) => (
-              <option key={icp.id} value={icp.id}>
-                {icp.name} · {icp.status}
-              </option>
-            ))
-          )}
-        </select>
-      </Label>
-      <Label>
-        <span className="text-muted-foreground">Discovery run</span>
-        <select name="run" defaultValue={snapshotRunId ?? ""} className={selectClass}>
-          {runs.length === 0 ? (
-            <option value="">No completed runs</option>
-          ) : (
-            runs.map((run) => (
-              <option key={run.id} value={run.id}>
-                {run.id.slice(0, 8)} · {run.status} · {run.prospectCount} orgs ·{" "}
-                {new Date(run.updatedAt).toLocaleString()}
-              </option>
-            ))
-          )}
-        </select>
-      </Label>
-      <Button type="submit" variant="outline">
-        Show
-      </Button>
-    </form>
-  );
+function withQuery(path: string, params: { icp?: string; run?: string }): string {
+  const nextParams = new URLSearchParams();
+  if (params.icp) {
+    nextParams.set("icp", params.icp);
+  }
+  if (params.run) {
+    nextParams.set("run", params.run);
+  }
+  return nextParams.size ? `${path}?${nextParams.toString()}` : path;
 }
 
 async function DashboardBody({
@@ -87,16 +44,7 @@ async function DashboardBody({
 }) {
   await connection();
   const params = await searchParams;
-  const nextParams = new URLSearchParams();
-  if (params.icp) {
-    nextParams.set("icp", params.icp);
-  }
-  if (params.run) {
-    nextParams.set("run", params.run);
-  }
-  const next = nextParams.size
-    ? `/dashboard?${nextParams.toString()}`
-    : "/dashboard";
+  const next = withQuery("/dashboard", params);
   const auth = await getPageAuth();
   if (!auth) {
     redirect(`/login?next=${encodeURIComponent(next)}`);
@@ -107,10 +55,14 @@ async function DashboardBody({
     icpId: params.icp,
     runId: params.run,
   });
+  const pipelineHref = withQuery("/pipeline", {
+    icp: snapshot.icp?.id,
+    run: snapshot.run?.id,
+  });
 
   return (
     <>
-      <IcpPicker
+      <IcpRunPicker
         snapshotIcpId={snapshot.icp?.id}
         snapshotRunId={snapshot.run?.id}
         icps={snapshot.icps}
@@ -133,6 +85,24 @@ async function DashboardBody({
           first, then discover prospects.
         </p>
       )}
+
+      <p className="mt-4 flex flex-wrap gap-4 text-sm text-muted-foreground">
+        <span>
+          Organizations:{" "}
+          <span className="text-foreground">{snapshot.cards.length}</span>
+        </span>
+        <span>
+          Email drafts:{" "}
+          <span className="text-foreground">{snapshot.channelCounts.email}</span>
+        </span>
+        <span>
+          LinkedIn drafts:{" "}
+          <span className="text-foreground">{snapshot.channelCounts.linkedin}</span>
+        </span>
+        <Link href={pipelineHref} className="underline">
+          Open pipeline
+        </Link>
+      </p>
 
       <section className="mt-8">
         <h2 className="font-serif text-2xl tracking-tight">Prospects</h2>
@@ -229,17 +199,6 @@ async function DashboardBody({
           </div>
         )}
       </section>
-
-      <section className="mt-10">
-        <h2 className="font-serif text-2xl tracking-tight">Pipeline</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Stages come from recorded data only. Later stages are human moves labeled
-          manual — no fabricated replies or sends.
-        </p>
-        <div className="mt-6">
-          <DashboardBoard snapshot={snapshot} />
-        </div>
-      </section>
     </>
   );
 }
@@ -250,11 +209,11 @@ export default function DashboardPage({
   searchParams: Promise<{ icp?: string; run?: string }>;
 }) {
   return (
-    <AppShell eyebrow="B009 · Pipeline" showLogout wide>
+    <AppShell eyebrow="B009 · Dashboard" showLogout wide>
       <h1 className="font-serif text-4xl tracking-tight">Dashboard</h1>
       <p className="mt-4 max-w-2xl text-muted-foreground">
-        ShiftPilot → ICP → cited prospects → outreach → approval → dry-run. One
-        board, real records only.
+        ShiftPilot → ICP → cited prospects → outreach → approval → dry-run.
+        Real records only.
       </p>
       <div className="mt-10">
         <Suspense

@@ -11,6 +11,7 @@ export const APP_NAV_LINKS = [
   { href: "/prospects", label: "Prospects" },
   { href: "/outreach", label: "Outreach" },
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/pipeline", label: "Pipeline" },
   { href: "/graph", label: "Graph" },
 ] as const;
 

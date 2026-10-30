@@ -36,15 +36,17 @@ describe("layoutKnowledgeGraph", () => {
 });
 
 describe("viewBoxForSelection", () => {
-  it("zooms to selected path nodes and falls back to the full graph", () => {
+  it("fits every node plus label padding, then zooms to a selected path", () => {
     const laid = layoutKnowledgeGraph(graph);
     const full = viewBoxForSelection(laid, []);
-    expect(full).toEqual({
-      x: 0,
-      y: 0,
-      width: laid.width,
-      height: laid.height,
-    });
+    const xs = laid.nodes.map((node) => node.x);
+    const ys = laid.nodes.map((node) => node.y);
+    expect(full.x).toBeLessThanOrEqual(0);
+    expect(full.y).toBeLessThanOrEqual(0);
+    expect(full.x + full.width).toBeGreaterThanOrEqual(laid.width);
+    expect(full.y + full.height).toBeGreaterThanOrEqual(laid.height);
+    expect(full.x + full.width).toBeGreaterThan(Math.max(...xs) + 200);
+    expect(full.y + full.height).toBeGreaterThan(Math.max(...ys) + 80);
 
     const seller = laid.nodes.find((node) => node.type === "seller")!;
     const prospect = laid.nodes.find((node) => node.prospectId === "mayo")!;

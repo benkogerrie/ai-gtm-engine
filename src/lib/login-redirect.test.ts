@@ -13,7 +13,7 @@ describe("safeLoginRedirect", () => {
     ).toBe("/icp/11111111-1111-4111-8111-111111111111?tab=exp");
   });
 
-  it("allows prospects, outreach, dashboard, and ICP index paths", () => {
+  it("allows prospects, outreach, dashboard, pipeline, graph, and ICP index paths", () => {
     expect(safeLoginRedirect("/prospects")).toBe("/prospects");
     expect(
       safeLoginRedirect("/prospects?icp=11111111-1111-4111-8111-111111111111&runId=9c1d74d6"),
@@ -29,6 +29,10 @@ describe("safeLoginRedirect", () => {
     expect(
       safeLoginRedirect("/dashboard?icp=11111111-1111-4111-8111-111111111111"),
     ).toBe("/dashboard?icp=11111111-1111-4111-8111-111111111111");
+    expect(safeLoginRedirect("/pipeline")).toBe("/pipeline");
+    expect(
+      safeLoginRedirect("/pipeline?icp=11111111-1111-4111-8111-111111111111"),
+    ).toBe("/pipeline?icp=11111111-1111-4111-8111-111111111111");
     expect(safeLoginRedirect("/graph")).toBe("/graph");
     expect(
       safeLoginRedirect("/graph?icp=11111111-1111-4111-8111-111111111111&run=9c1d74d6"),
@@ -45,6 +49,7 @@ describe("safeLoginRedirect", () => {
     expect(safeLoginRedirect("/prospects-evil")).toBe("/intake");
     expect(safeLoginRedirect("/outreach-evil")).toBe("/intake");
     expect(safeLoginRedirect("/dashboard-evil")).toBe("/intake");
+    expect(safeLoginRedirect("/pipeline-evil")).toBe("/intake");
     expect(safeLoginRedirect("/graph-evil")).toBe("/intake");
     expect(safeLoginRedirect("/icp-evil")).toBe("/intake");
   });

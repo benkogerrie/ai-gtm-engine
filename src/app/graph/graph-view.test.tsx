@@ -194,6 +194,7 @@ describe("GraphView highlight", () => {
     vi.useFakeTimers();
     const { container } = render(<GraphView snapshot={snapshot} />);
 
+    const initialViewBox = container.querySelector("svg")?.getAttribute("data-viewbox");
     fireEvent.click(screen.getAllByRole("button", { name: "Find best match" })[0]!);
     expect(screen.getAllByText("Matching 2 prospects…").length).toBeGreaterThan(
       0,
@@ -201,12 +202,18 @@ describe("GraphView highlight", () => {
     expect(container.querySelector("svg")?.getAttribute("data-path-prospect")).toBe(
       "",
     );
+    expect(container.querySelector("svg")?.getAttribute("data-viewbox")).toBe(
+      initialViewBox,
+    );
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(800);
     });
     expect(container.querySelector("svg")?.getAttribute("data-path-prospect")).toBe(
       "mercy",
+    );
+    expect(container.querySelector("svg")?.getAttribute("data-viewbox")).not.toBe(
+      initialViewBox,
     );
     expect(screen.getByText(/ShiftPilot → US hospitals ICP → NAICS 622110 → Mercy/)).toBeInTheDocument();
   });

@@ -38,6 +38,11 @@ const COLUMN_ORDER: GraphNodeType[] = [
 
 export const GRAPH_VIEWBOX = { width: 2360, height: 720 };
 
+/** Room for 2-line labels, badges, and path halos around node centers. */
+const FULL_PAD_X = 280;
+const FULL_PAD_Y_TOP = 72;
+const FULL_PAD_Y_BOTTOM = 110;
+
 export function layoutKnowledgeGraph(graph: KnowledgeGraph): {
   nodes: LaidOutNode[];
   edges: LaidOutEdge[];
@@ -105,16 +110,33 @@ export function layoutKnowledgeGraph(graph: KnowledgeGraph): {
   return { nodes: laid, edges, width: GRAPH_VIEWBOX.width, height };
 }
 
+function viewBoxForFullGraph(layout: {
+  nodes: LaidOutNode[];
+  width: number;
+  height: number;
+}): GraphViewBox {
+  if (layout.nodes.length === 0) {
+    return { x: 0, y: 0, width: layout.width, height: layout.height };
+  }
+  const xs = layout.nodes.map((node) => node.x);
+  const ys = layout.nodes.map((node) => node.y);
+  const x = Math.min(0, Math.min(...xs) - FULL_PAD_X);
+  const y = Math.min(0, Math.min(...ys) - FULL_PAD_Y_TOP);
+  const right = Math.max(layout.width, Math.max(...xs) + FULL_PAD_X);
+  const bottom = Math.max(layout.height, Math.max(...ys) + FULL_PAD_Y_BOTTOM);
+  return {
+    x,
+    y,
+    width: right - x,
+    height: bottom - y,
+  };
+}
+
 export function viewBoxForSelection(
   layout: { nodes: LaidOutNode[]; width: number; height: number },
   nodeIds: string[] | null | undefined,
 ): GraphViewBox {
-  const full: GraphViewBox = {
-    x: 0,
-    y: 0,
-    width: layout.width,
-    height: layout.height,
-  };
+  const full = viewBoxForFullGraph(layout);
   if (!nodeIds || nodeIds.length === 0) {
     return full;
   }
