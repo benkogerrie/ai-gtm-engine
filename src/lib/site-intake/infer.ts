@@ -80,11 +80,28 @@ export function buildSiteIntakeUserPrompt(
 }
 
 function firstMeaningfulLine(text: string): string | null {
+  const skip = /^(website:|title:|---|return json|source pages|you extract|rules:|only state|do not )/i;
   const line = text
     .split("\n")
     .map((part) => part.trim())
-    .find((part) => part.length >= 40 && !part.startsWith("Website:"));
+    .find((part) => part.length >= 40 && !skip.test(part));
   return line ? line.slice(0, 240) : null;
+}
+
+function sourcePagesFromMessages(messages: { role: string; content: string }[]): {
+  websiteUrl: string;
+  title: string | null;
+  text: string;
+} {
+  const user = messages.find((message) => message.role === "user")?.content ?? "";
+  const websiteUrl =
+    /Website:\s*(\S+)/.exec(user)?.[1]?.trim() ?? "https://example.com";
+  const marker = "Source pages:";
+  const text = user.includes(marker)
+    ? user.slice(user.indexOf(marker) + marker.length).trim()
+    : user;
+  const title = /Title:\s*(.+)/.exec(text)?.[1]?.trim() ?? null;
+  return { websiteUrl, title, text };
 }
 
 export function buildMockSiteIntake(
@@ -124,13 +141,10 @@ export function createSiteIntakeLlmClient(): {
   return {
     client: createMockLlmClient({
       jsonHandler: (schema, messages) => {
-        const prompt = messages.map((message) => message.content).join("\n");
-        const websiteUrl =
-          /Website:\s*(\S+)/.exec(prompt)?.[1]?.trim() ?? "https://example.com";
-        const title = /Title:\s*(.+)/.exec(prompt)?.[1]?.trim() ?? null;
+        const source = sourcePagesFromMessages(messages);
         const raw = buildMockSiteIntake(
-          [{ url: websiteUrl, title, text: prompt }],
-          websiteUrl,
+          [{ url: source.websiteUrl, title: source.title, text: source.text }],
+          source.websiteUrl,
         );
         return schema.parse(raw);
       },
