@@ -81,42 +81,17 @@
   }
 }
 
-@keyframes graph-path-reveal {
+@keyframes graph-path-fade {
   from {
-    stroke-dashoffset: 220;
-    opacity: 0.15;
+    opacity: 0;
   }
   to {
-    stroke-dashoffset: 0;
     opacity: 1;
   }
 }
 
-@keyframes graph-path-flow {
-  to {
-    stroke-dashoffset: -48;
-  }
-}
-
 .graph-path-edge {
-  animation:
-    graph-path-reveal 0.5s ease-out both,
-    graph-path-flow 0.85s linear 0.5s infinite;
-}
-
-.graph-path-node {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: graph-path-node-in 0.35s ease-out both;
-}
-
-@keyframes graph-path-node-in {
-  from {
-    transform: scale(0.82);
-  }
-  to {
-    transform: scale(1);
-  }
+  animation: graph-path-fade 0.45s ease-out both;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -5,7 +5,7 @@ import { EvidenceLabelBadge } from "@/components/evidence-label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { layoutKnowledgeGraph } from "@/lib/graph/layout";
+import { layoutKnowledgeGraph, viewBoxForSelection } from "@/lib/graph/layout";
 import type { GraphSnapshot } from "@/lib/graph";
 import type { EvidenceLabel } from "@/lib/discovery/types";
 import type { GraphNodeType } from "@/lib/graph/types";
@@ -22,7 +22,7 @@ const NODE_FILL: Record<GraphNodeType, string> = {
 const NODE_LEGEND: Array<{ type: GraphNodeType; label: string }> = [
   { type: "seller", label: "Seller" },
   { type: "icp", label: "ICP" },
-  { type: "attribute", label: "ICP attribute" },
+  { type: "attribute", label: "Attribute" },
   { type: "prospect", label: "Prospect" },
   { type: "claim", label: "Claim" },
   { type: "source", label: "Source" },
@@ -30,6 +30,8 @@ const NODE_LEGEND: Array<{ type: GraphNodeType; label: string }> = [
 
 const EDGE_STROKE = "var(--color-foreground)";
 const PATH_STROKE = "var(--color-primary)";
+const DIMMED = 0.42;
+const LABEL_HALO = "var(--color-background)";
 
 function dashFor(evidence: EvidenceLabel): string | undefined {
   if (evidence === "VERIFIED") {
@@ -52,7 +54,8 @@ function wrapLabel(value: string, maxChars: number, maxLines: number): string[] 
   const words = value.split(/\s+/).filter(Boolean);
   const lines: string[] = [];
   let current = "";
-  for (const word of words) {
+  for (let i = 0; i < words.length; i += 1) {
+    const word = words[i]!;
     const next = current ? `${current} ${word}` : word;
     if (next.length <= maxChars) {
       current = next;
@@ -63,8 +66,7 @@ function wrapLabel(value: string, maxChars: number, maxLines: number): string[] 
     }
     current = word;
     if (lines.length === maxLines - 1) {
-      const rest = [word, ...words.slice(words.indexOf(word) + 1)].join(" ");
-      lines.push(truncate(rest, maxChars));
+      lines.push(truncate([word, ...words.slice(i + 1)].join(" "), maxChars));
       return lines;
     }
   }
@@ -89,12 +91,19 @@ function nodeRadius(
 ): number {
   const compact = type === "claim" || type === "source";
   if (selected) {
-    return 20;
+    return 18;
   }
   if (onPath) {
-    return compact ? 14 : 18;
+    return compact ? 13 : 16;
   }
-  return compact ? 8 : 12;
+  return compact ? 8 : 11;
+}
+
+function evidenceBadge(label: EvidenceLabel): string {
+  if (label === "source-candidate") {
+    return "SRC";
+  }
+  return label;
 }
 
 export function GraphView({
@@ -110,6 +119,7 @@ export function GraphView({
       ? initialProspectId
       : undefined,
   );
+  const [fitAll, setFitAll] = useState(false);
   const [searching, setSearching] = useState(false);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -139,6 +149,10 @@ export function GraphView({
   const hopIndex = new Map(
     (match?.edgeIds ?? []).map((edgeId, index) => [edgeId, index]),
   );
+  const viewBox = viewBoxForSelection(
+    layout,
+    !fitAll && match ? match.nodeIds : null,
+  );
 
   const prospects = snapshot.graph.nodes.filter((node) => node.type === "prospect");
   const pathEdges = layout.edges.filter((edge) => pathEdgeIds.has(edge.id));
@@ -150,6 +164,7 @@ export function GraphView({
       searchTimer.current = null;
     }
     setSearching(false);
+    setFitAll(false);
     setSelectedId(prospectId);
   }
 
@@ -162,6 +177,7 @@ export function GraphView({
       clearTimeout(searchTimer.current);
       searchTimer.current = null;
     }
+    setFitAll(false);
     if (prefersReducedMotion()) {
       setSearching(false);
       setSelectedId(best.prospectId);
@@ -177,51 +193,55 @@ export function GraphView({
   }
 
   return (
-    <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
-      <div>
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-muted-foreground" aria-live="polite">
-            {searching
-              ? `Matching ${snapshot.matches.length} prospects…`
-              : `${snapshot.graph.nodes.length} nodes · ${snapshot.graph.edges.length} edges · ${snapshot.matches.length} matched paths`}
-          </p>
-          <Button
-            type="button"
-            size="sm"
-            onClick={findBestMatch}
-            disabled={snapshot.matches.length === 0 || searching}
-          >
-            Find best match
-          </Button>
-        </div>
+    <div className="mt-3">
+      <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        <p aria-live="polite">
+          {searching
+            ? `Matching ${snapshot.matches.length} prospects…`
+            : `${snapshot.graph.nodes.length} nodes · ${snapshot.graph.edges.length} edges · ${snapshot.matches.length} paths`}
+        </p>
+        <Button
+          type="button"
+          size="sm"
+          onClick={findBestMatch}
+          disabled={snapshot.matches.length === 0 || searching}
+        >
+          Find best match
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setFitAll(true)}
+        >
+          Fit all
+        </Button>
+        {NODE_LEGEND.map((item) => (
+          <span key={item.type} className="inline-flex items-center gap-1">
+            <span
+              className="inline-block size-2 rounded-full"
+              style={{ background: NODE_FILL[item.type] }}
+            />
+            {item.label}
+          </span>
+        ))}
+        <span className="inline-flex items-center gap-1">
+          <span className="inline-block w-5 border-t-2 border-foreground" />
+          VERIFIED
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <span className="inline-block w-5 border-t-2 border-dashed border-foreground" />
+          INFERRED
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <span className="inline-block w-5 border-t-2 border-dotted border-foreground" />
+          candidate
+        </span>
+      </div>
 
-        <div className="mb-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-          {NODE_LEGEND.map((item) => (
-            <span key={item.type} className="inline-flex items-center gap-1.5">
-              <span
-                className="inline-block size-2.5 rounded-full"
-                style={{ background: NODE_FILL[item.type] }}
-              />
-              {item.label}
-            </span>
-          ))}
-          <span className="inline-flex items-center gap-1.5">
-            <span className="inline-block w-7 border-t-2 border-foreground" />
-            VERIFIED
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="inline-block w-7 border-t-2 border-dashed border-foreground" />
-            INFERRED
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="inline-block w-7 border-t-2 border-dotted border-foreground" />
-            source-candidate
-          </span>
-        </div>
-
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_17rem]">
         <div
-          className="relative min-h-[600px] overflow-auto rounded-lg border bg-card"
-          style={{ height: "min(72vh, 920px)" }}
+          className="relative h-[70vh] min-h-[420px] overflow-hidden rounded-lg border bg-card"
         >
           {searching ? (
             <div
@@ -232,14 +252,14 @@ export function GraphView({
             </div>
           ) : null}
           <svg
-            viewBox={`0 0 ${layout.width} ${layout.height}`}
-            width={layout.width}
-            height={Math.max(layout.height, 600)}
+            viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
+            preserveAspectRatio="xMidYMid meet"
             role="img"
             aria-label="Knowledge graph of seller, ICP, attributes, prospects, claims, and sources"
             data-path-prospect={selectedId ?? ""}
             data-searching={searching ? "true" : "false"}
-            className="block"
+            data-viewbox={`${viewBox.x} ${viewBox.y} ${Math.round(viewBox.width)} ${Math.round(viewBox.height)}`}
+            className="h-full w-full"
           >
             {otherEdges.map((edge) => {
               const meta = edgeById.get(edge.id);
@@ -247,7 +267,7 @@ export function GraphView({
                 return null;
               }
               const midX = (edge.x1 + edge.x2) / 2;
-              const midY = (edge.y1 + edge.y2) / 2 - 24;
+              const midY = (edge.y1 + edge.y2) / 2 - 28;
               return (
                 <path
                   key={edge.id}
@@ -257,8 +277,7 @@ export function GraphView({
                   strokeWidth={1.55}
                   strokeDasharray={dashFor(meta.evidence)}
                   strokeLinecap={meta.evidence === "VERIFIED" ? "butt" : "round"}
-                  vectorEffect="non-scaling-stroke"
-                  opacity={match ? 0.2 : 0.72}
+                  opacity={match ? DIMMED : 0.72}
                   data-edge-id={edge.id}
                   data-on-path="false"
                 />
@@ -271,25 +290,48 @@ export function GraphView({
                   return null;
                 }
                 const midX = (edge.x1 + edge.x2) / 2;
-                const midY = (edge.y1 + edge.y2) / 2 - 24;
+                const controlY = (edge.y1 + edge.y2) / 2 - 28;
                 const hop = hopIndex.get(edge.id) ?? 0;
+                const badgeX = (edge.x1 + 2 * midX + edge.x2) / 4;
+                const badgeY = (edge.y1 + 2 * controlY + edge.y2) / 4;
+                const badge = evidenceBadge(meta.evidence);
                 return (
-                  <path
+                  <g
                     key={edge.id}
-                    d={`M ${edge.x1} ${edge.y1} Q ${midX} ${midY} ${edge.x2} ${edge.y2}`}
-                    fill="none"
-                    stroke={PATH_STROKE}
-                    strokeWidth={3.5}
-                    strokeDasharray="14 10"
-                    strokeLinecap="round"
-                    vectorEffect="non-scaling-stroke"
                     className="graph-path-edge"
                     style={{ animationDelay: `${hop * 140}ms` }}
-                    opacity={1}
-                    data-edge-id={edge.id}
-                    data-on-path="true"
-                    data-hop={hop}
-                  />
+                  >
+                    <path
+                      d={`M ${edge.x1} ${edge.y1} Q ${midX} ${controlY} ${edge.x2} ${edge.y2}`}
+                      fill="none"
+                      stroke={PATH_STROKE}
+                      strokeWidth={3.75}
+                      strokeLinecap="round"
+                      data-edge-id={edge.id}
+                      data-on-path="true"
+                      data-hop={hop}
+                    />
+                    <rect
+                      x={badgeX - 28}
+                      y={badgeY - 9}
+                      width={56}
+                      height={16}
+                      rx={3}
+                      fill="var(--color-background)"
+                      stroke={PATH_STROKE}
+                      strokeWidth={1}
+                    />
+                    <text
+                      x={badgeX}
+                      y={badgeY + 4}
+                      textAnchor="middle"
+                      fill={PATH_STROKE}
+                      fontSize={9}
+                      fontWeight={700}
+                    >
+                      {badge}
+                    </text>
+                  </g>
                 );
               })}
             </g>
@@ -300,15 +342,13 @@ export function GraphView({
               const clickable = node.type === "prospect" && node.prospectId;
               const radius = nodeRadius(node.type, onPath, selected);
               const showFull = onPath || selected;
-              const lines = showFull
-                ? wrapLabel(node.label, 34, 3)
-                : [truncate(node.label, 32)];
+              const lines = wrapLabel(node.label, showFull ? 26 : 22, 2);
               return (
                 <g
                   key={node.id}
                   transform={`translate(${node.x} ${node.y})`}
-                  className={cn(clickable && "cursor-pointer", onPath && "graph-path-node")}
-                  opacity={match && !onPath ? 0.2 : 1}
+                  className={clickable ? "cursor-pointer" : undefined}
+                  opacity={match && !onPath ? DIMMED : 1}
                   onClick={() => {
                     if (node.prospectId) {
                       selectProspect(node.prospectId);
@@ -317,6 +357,8 @@ export function GraphView({
                   data-node-id={node.id}
                   data-on-path={onPath ? "true" : "false"}
                   data-selected={selected ? "true" : "false"}
+                  data-x={String(node.x)}
+                  data-y={String(node.y)}
                 >
                   <title>{node.label}</title>
                   {onPath || selected ? (
@@ -324,8 +366,8 @@ export function GraphView({
                       r={radius + 6}
                       fill="none"
                       stroke={PATH_STROKE}
-                      strokeWidth={2}
-                      opacity={0.35}
+                      strokeWidth={2.5}
+                      opacity={0.4}
                     />
                   ) : null}
                   <circle
@@ -339,9 +381,12 @@ export function GraphView({
                   {lines.map((line, index) => (
                     <text
                       key={`${node.id}-${index}`}
-                      y={radius + 16 + index * 15}
+                      y={radius + 20 + index * 15}
                       textAnchor="middle"
                       fill="var(--color-foreground)"
+                      stroke={LABEL_HALO}
+                      strokeWidth={5}
+                      paintOrder="stroke"
                       fontSize={12.5}
                       fontWeight={onPath || selected ? 600 : 400}
                     >
@@ -353,109 +398,104 @@ export function GraphView({
             })}
           </svg>
         </div>
-      </div>
 
-      <aside className="space-y-4">
-        <Card>
-          <CardContent className="p-4">
-            <h2 className="font-serif text-xl tracking-tight">Prospects</h2>
-            {prospects.length === 0 ? (
-              <p className="mt-2 text-sm text-muted-foreground">
-                No prospect nodes in this run.
-              </p>
-            ) : (
-              <ul className="mt-3 grid gap-1">
-                {prospects.map((prospect) => {
-                  const ranked = snapshot.matches.find(
-                    (row) => row.prospectId === prospect.prospectId,
-                  );
-                  const active = prospect.prospectId === selectedId;
-                  return (
-                    <li key={prospect.id}>
-                      <button
-                        type="button"
-                        aria-label={prospect.label}
-                        aria-pressed={active}
-                        onClick={() => {
-                          if (prospect.prospectId) {
-                            selectProspect(prospect.prospectId);
-                          }
-                        }}
-                        className={cn(
-                          "flex w-full items-start justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm",
-                          active ? "bg-accent" : "hover:bg-secondary",
-                        )}
-                      >
-                        <span>{prospect.label}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {ranked ? `w ${ranked.weight}` : "unreachable"}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <h2 className="font-serif text-xl tracking-tight">Match path</h2>
-            {searching ? (
-              <p className="mt-2 text-sm text-muted-foreground">
-                Matching {snapshot.matches.length} prospects…
-              </p>
-            ) : !match ? (
-              <p className="mt-2 text-sm text-muted-foreground">
-                Select a prospect or click Find best match. Unreachable
-                prospects have no derived seller → ICP → attribute path.
-              </p>
-            ) : (
-              <>
-                <p className="mt-2 text-sm">{match.explanation}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Weight {match.weight} · {match.hops} hops · VERIFIED=1,
-                  INFERRED=3, source-candidate=5
+        <aside className="flex max-h-[70vh] min-h-[420px] flex-col gap-3">
+          <Card className="min-h-0 flex-1 overflow-hidden">
+            <CardContent className="flex h-full flex-col p-3">
+              <h2 className="font-serif text-lg tracking-tight">Prospects</h2>
+              {prospects.length === 0 ? (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  No prospect nodes in this run.
                 </p>
-                <ol className="mt-3 grid gap-2 text-sm">
-                  {match.edgeIds.map((edgeId, index) => {
-                    const edge = edgeById.get(edgeId);
-                    if (!edge) {
-                      return null;
-                    }
-                    const from = nodeById.get(edge.from);
-                    const to = nodeById.get(edge.to);
+              ) : (
+                <ul className="mt-2 min-h-0 flex-1 space-y-0.5 overflow-auto">
+                  {prospects.map((prospect) => {
+                    const ranked = snapshot.matches.find(
+                      (row) => row.prospectId === prospect.prospectId,
+                    );
+                    const active = prospect.prospectId === selectedId;
                     return (
-                      <li key={edgeId} className="rounded-md border px-3 py-2">
-                        <p className="font-medium">
-                          {index + 1}. {from?.label} → {to?.label}
-                        </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {edge.type} · {edge.label}
-                        </p>
-                        <div className="mt-1">
-                          <EvidenceLabelBadge label={edge.evidence} />
-                        </div>
-                        {edge.sourceUrl ? (
-                          <a
-                            href={edge.sourceUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="mt-1 inline-block text-xs underline underline-offset-2"
-                          >
-                            {edge.sourceUrl}
-                          </a>
-                        ) : null}
+                      <li key={prospect.id}>
+                        <button
+                          type="button"
+                          aria-label={prospect.label}
+                          aria-pressed={active}
+                          onClick={() => {
+                            if (prospect.prospectId) {
+                              selectProspect(prospect.prospectId);
+                            }
+                          }}
+                          className={cn(
+                            "flex w-full items-start justify-between gap-2 rounded-md px-2 py-1 text-left text-sm",
+                            active ? "bg-accent" : "hover:bg-secondary",
+                          )}
+                        >
+                          <span>{prospect.label}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {ranked ? `w ${ranked.weight}` : "unreachable"}
+                          </span>
+                        </button>
                       </li>
                     );
                   })}
-                </ol>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </aside>
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="max-h-[46%] overflow-auto">
+            <CardContent className="p-3">
+              <h2 className="font-serif text-lg tracking-tight">Match path</h2>
+              {searching ? (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Matching {snapshot.matches.length} prospects…
+                </p>
+              ) : !match ? (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Select a prospect or Find best match.
+                </p>
+              ) : (
+                <>
+                  <p className="mt-2 text-sm">{match.explanation}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Weight {match.weight} · {match.hops} hops
+                  </p>
+                  <ol className="mt-2 grid gap-1.5 text-sm">
+                    {match.edgeIds.map((edgeId, index) => {
+                      const edge = edgeById.get(edgeId);
+                      if (!edge) {
+                        return null;
+                      }
+                      const from = nodeById.get(edge.from);
+                      const to = nodeById.get(edge.to);
+                      return (
+                        <li key={edgeId} className="rounded-md border px-2 py-1.5">
+                          <p className="font-medium">
+                            {index + 1}. {from?.label} → {to?.label}
+                          </p>
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
+                            <EvidenceLabelBadge label={edge.evidence} />
+                            {edge.sourceUrl ? (
+                              <a
+                                href={edge.sourceUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs underline underline-offset-2"
+                              >
+                                source
+                              </a>
+                            ) : null}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </aside>
+      </div>
     </div>
   );
 }

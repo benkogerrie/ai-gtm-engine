@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { EvidenceLegend } from "@/components/evidence-label";
 import { getDb } from "@/db/client";
 import { loadGraph } from "@/lib/graph";
 import { getPageAuth } from "@/lib/session";
@@ -154,7 +153,7 @@ async function GraphBody({
         runs={snapshot.runs}
       />
       {snapshot.icp ? (
-        <p className="mt-3 text-sm text-muted-foreground">
+        <p className="mt-1 text-xs text-muted-foreground">
           Showing{" "}
           <Link href={`/icp/${snapshot.icp.id}`} className="underline">
             {snapshot.icp.name}
@@ -206,21 +205,15 @@ export default function GraphPage({
 }) {
   return (
     <AppShell eyebrow="B014 · Knowledge graph" showLogout wide full>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-serif text-4xl tracking-tight">Graph</h1>
-          <p className="mt-4 max-w-2xl text-muted-foreground">
-            Automated path matching from seller and ICP to cited prospects.
-            Edges are derived from stored records only. VERIFIED means a
-            retrieved cited source URL — not independently verified.
-          </p>
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="font-serif text-2xl tracking-tight">Graph</h1>
         <Badge variant="outline">Dijkstra</Badge>
       </div>
-      <div className="mt-4">
-        <EvidenceLegend />
-      </div>
-      <div className="mt-8">
+      <p className="mt-1 max-w-3xl text-xs text-muted-foreground">
+        Seller → ICP → attribute → prospect. VERIFIED = retrieved cited URL, not
+        independently verified.
+      </p>
+      <div className="mt-3">
         <Suspense
           fallback={<p className="text-sm text-muted-foreground">Loading graph…</p>}
         >

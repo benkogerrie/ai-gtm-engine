@@ -11,13 +11,20 @@ export type LaidOutEdge = {
   y2: number;
 };
 
+export type GraphViewBox = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 const COLUMN_X: Record<GraphNodeType, number> = {
-  seller: 180,
-  icp: 460,
-  attribute: 820,
-  prospect: 1220,
-  claim: 1620,
-  source: 2000,
+  seller: 200,
+  icp: 520,
+  attribute: 900,
+  prospect: 1320,
+  claim: 1740,
+  source: 2140,
 };
 
 const COLUMN_ORDER: GraphNodeType[] = [
@@ -29,7 +36,7 @@ const COLUMN_ORDER: GraphNodeType[] = [
   "source",
 ];
 
-export const GRAPH_VIEWBOX = { width: 2200, height: 720 };
+export const GRAPH_VIEWBOX = { width: 2360, height: 720 };
 
 export function layoutKnowledgeGraph(graph: KnowledgeGraph): {
   nodes: LaidOutNode[];
@@ -42,24 +49,33 @@ export function layoutKnowledgeGraph(graph: KnowledgeGraph): {
     byType.set(type, []);
   }
   for (const node of graph.nodes) {
-    byType.get(node.type)?.push(node);
+    const bucket = byType.get(node.type) ?? [];
+    bucket.push(node);
+    byType.set(node.type, bucket);
   }
   for (const list of byType.values()) {
-    list.sort((left, right) => left.label.localeCompare(right.label));
+    list.sort((left, right) => {
+      const byLabel = left.label.localeCompare(right.label);
+      if (byLabel !== 0) {
+        return byLabel;
+      }
+      return left.id.localeCompare(right.id);
+    });
   }
 
   const maxCount = Math.max(1, ...[...byType.values()].map((list) => list.length));
-  const height = Math.max(GRAPH_VIEWBOX.height, 140 + maxCount * 92);
+  const height = Math.max(GRAPH_VIEWBOX.height, 160 + maxCount * 108);
   const laid: LaidOutNode[] = [];
   const byId = new Map<string, LaidOutNode>();
 
   for (const type of COLUMN_ORDER) {
     const list = byType.get(type) ?? [];
     const gap = list.length > 0 ? height / (list.length + 1) : height / 2;
+    const x = COLUMN_X[type];
     list.forEach((node, index) => {
       const laidNode = {
         ...node,
-        x: COLUMN_X[type],
+        x,
         y: gap * (index + 1),
       };
       laid.push(laidNode);
@@ -87,4 +103,37 @@ export function layoutKnowledgeGraph(graph: KnowledgeGraph): {
   });
 
   return { nodes: laid, edges, width: GRAPH_VIEWBOX.width, height };
+}
+
+export function viewBoxForSelection(
+  layout: { nodes: LaidOutNode[]; width: number; height: number },
+  nodeIds: string[] | null | undefined,
+): GraphViewBox {
+  const full: GraphViewBox = {
+    x: 0,
+    y: 0,
+    width: layout.width,
+    height: layout.height,
+  };
+  if (!nodeIds || nodeIds.length === 0) {
+    return full;
+  }
+  const selected = layout.nodes.filter((node) => nodeIds.includes(node.id));
+  if (selected.length === 0) {
+    return full;
+  }
+  const padX = 240;
+  const padY = 160;
+  const minX = Math.min(...selected.map((node) => node.x)) - padX;
+  const maxX = Math.max(...selected.map((node) => node.x)) + padX;
+  const minY = Math.min(...selected.map((node) => node.y)) - padY;
+  const maxY = Math.max(...selected.map((node) => node.y)) + padY;
+  const x = Math.max(0, minX);
+  const y = Math.max(0, minY);
+  return {
+    x,
+    y,
+    width: Math.min(layout.width - x, Math.max(520, maxX - x)),
+    height: Math.min(layout.height - y, Math.max(320, maxY - y)),
+  };
 }

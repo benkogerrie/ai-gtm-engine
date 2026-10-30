@@ -165,6 +165,19 @@ describe("GraphView highlight", () => {
     expect(container.querySelector("[data-path-layer]")?.getAttribute("data-path-layer")).toBe(
       "mayo",
     );
+    expect(
+      container.querySelector('[data-node-id="seller:s"]')?.getAttribute("data-x"),
+    ).not.toBe("0");
+    expect(
+      container.querySelector('[data-node-id="seller:s"]')?.getAttribute("transform"),
+    ).toMatch(/translate\([^0]/);
+    expect(
+      container.querySelector('[data-node-id="icp:i"]')?.getAttribute("data-x"),
+    ).not.toBe(
+      container.querySelector('[data-node-id="seller:s"]')?.getAttribute("data-x"),
+    );
+    expect(svg?.getAttribute("data-viewbox")).toBeTruthy();
+    expect(svg?.getAttribute("class")).toContain("h-full");
   });
 
   it("shows a matching status then reveals the top-ranked path", async () => {
