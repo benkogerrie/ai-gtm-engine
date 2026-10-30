@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { DraftOutreachButton } from "@/components/draft-outreach-button";
+import { ViewInGraphLink } from "@/components/view-in-graph-link";
 import {
   EvidenceLabelBadge,
   EvidenceLegend,
@@ -171,8 +172,13 @@ async function DashboardBody({
                       {card.domain ? (
                         <p className="text-xs text-muted-foreground">{card.domain}</p>
                       ) : null}
-                      <div className="mt-2">
+                      <div className="mt-2 flex flex-wrap items-center gap-3">
                         <DraftOutreachButton companyId={card.companyId} />
+                        <ViewInGraphLink
+                          icpId={snapshot.icp?.id}
+                          runId={snapshot.run?.id}
+                          prospectId={card.companyId}
+                        />
                       </div>
                     </TableCell>
                     <TableCell className="whitespace-nowrap">

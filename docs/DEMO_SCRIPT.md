@@ -62,7 +62,7 @@ Free text is optional. The prospects form is prefilled with the same product sum
 
 ## Happy path (LIVE)
 
-Nav is **Intake · ICP · Prospects · Outreach · Dashboard** on every gated page.
+Nav is **Intake · ICP · Prospects · Outreach · Dashboard · Graph** on every gated page.
 
 ### 1. Sign in — `/login`
 
@@ -123,6 +123,15 @@ Expect: status → `DRY_RUN_COMPLETED`. `sentAt` stays empty. The hospital is no
 
 Expect: you cannot move a card into **Approved** or **Dry-run sent** without the matching record. Manual stages (Replied / Meeting booked / Closed/Lost) are human-asserted and audited with actor + timestamp; they are not system-verified.
 
+### 8. Knowledge graph — `/graph`
+
+1. From a prospect row click **View in graph**, or open **Graph** in the nav. The page defaults to the same latest completed run as the dashboard.
+2. Confirm nodes (seller, ICP, NAICS/persona/trigger attributes, prospect orgs, claims, source URLs) and edges. Solid = **VERIFIED**, dashed = **INFERRED**, dotted = **source-candidate**.
+3. Click a hospital (or **Find best match**). The cheapest derived path seller → ICP → attribute → prospect highlights. The side panel lists hops, labels, and clickable source URLs.
+4. Read the explanation (e.g. `ShiftPilot → … → NAICS 622110 → Montefiore, evidence: https://…`). Weight uses VERIFIED=1, INFERRED=3, source-candidate=5.
+
+Expect: no invented nodes. MOCK runs show an amber **MOCK output** banner. **VERIFIED** still means a retrieved cited source URL — not independently verified by a human or a second source.
+
 ## Fallback when keys are missing
 
 The loop still works; treat everything as labeled fixture data.
@@ -138,7 +147,7 @@ The loop still works; treat everything as labeled fixture data.
 - Local data lives in PGlite only while `DATABASE_URL` is unset (default `.pglite/` on disk). Vercel Preview uses Postgres (Neon) via `DATABASE_URL`.
 - Discovery taking ~30–60s (Brave at most 1 req/s × several queries + DeepSeek extract/score).
 - Peripheral-only evidence (nursing/hospital mention without scheduling or staffing operations) is capped at a fit score of **54**.
-- **Knowledge Graph** on the home page still **Coming soon** (B006). `relationship_edges` exist in Postgres only.
+- `/graph` is a derived in-memory graph (B014), not a Neo4j/Kùzu store (B006). `relationship_edges` still exist in Postgres only.
 - No real email, LinkedIn, or SMS send. `SENT` is a domain state; the UI only offers dry-run.
 - `pnpm test:live` skipping in CI or this environment when keys are unset.
 
@@ -154,3 +163,4 @@ The loop still works; treat everything as labeled fixture data.
 | Discovery run | ~1 min | seconds |
 | Draft + approve + dry-run | ~2 min | ~2 min |
 | Dashboard review | ~1 min | ~1 min |
+| Graph path match | ~1 min | ~1 min |

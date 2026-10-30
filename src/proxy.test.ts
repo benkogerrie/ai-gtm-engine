@@ -26,6 +26,14 @@ describe("proxy auth gate", () => {
     expect(location).toContain("next=%2Fdashboard");
   });
 
+  it("redirects unauthenticated /graph to /login", () => {
+    installTestAuth();
+    const response = proxy(new NextRequest("http://localhost/graph"));
+    const location = response.headers.get("location") ?? "";
+    expect(location).toContain("/login");
+    expect(location).toContain("next=%2Fgraph");
+  });
+
   it("redirects unauthenticated /outreach/[id] to /login", () => {
     installTestAuth();
     const response = proxy(

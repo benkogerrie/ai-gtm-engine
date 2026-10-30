@@ -45,6 +45,9 @@ function isAllowlisted(pathname: string): boolean {
   if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) {
     return true;
   }
+  if (pathname === "/graph" || pathname.startsWith("/graph/")) {
+    return true;
+  }
   return false;
 }
 

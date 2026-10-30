@@ -29,6 +29,10 @@ describe("safeLoginRedirect", () => {
     expect(
       safeLoginRedirect("/dashboard?icp=11111111-1111-4111-8111-111111111111"),
     ).toBe("/dashboard?icp=11111111-1111-4111-8111-111111111111");
+    expect(safeLoginRedirect("/graph")).toBe("/graph");
+    expect(
+      safeLoginRedirect("/graph?icp=11111111-1111-4111-8111-111111111111&run=9c1d74d6"),
+    ).toBe("/graph?icp=11111111-1111-4111-8111-111111111111&run=9c1d74d6");
     expect(safeLoginRedirect("/icp")).toBe("/icp");
   });
 
@@ -41,6 +45,7 @@ describe("safeLoginRedirect", () => {
     expect(safeLoginRedirect("/prospects-evil")).toBe("/intake");
     expect(safeLoginRedirect("/outreach-evil")).toBe("/intake");
     expect(safeLoginRedirect("/dashboard-evil")).toBe("/intake");
+    expect(safeLoginRedirect("/graph-evil")).toBe("/intake");
     expect(safeLoginRedirect("/icp-evil")).toBe("/intake");
   });
 

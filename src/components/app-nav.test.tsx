@@ -17,5 +17,7 @@ describe("isAppNavActive", () => {
     expect(isAppNavActive("/icp/abc", "/icp")).toBe(true);
     expect(isAppNavActive("/icp", "/intake")).toBe(false);
     expect(isAppNavActive("/outreach/new", "/outreach")).toBe(true);
+    expect(isAppNavActive("/graph", "/graph")).toBe(true);
+    expect(isAppNavActive("/graph", "/dashboard")).toBe(false);
   });
 });

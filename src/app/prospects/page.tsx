@@ -11,6 +11,7 @@ import {
   type DiscoveryRunSnapshot,
 } from "@/lib/discovery";
 import { DraftOutreachButton } from "@/components/draft-outreach-button";
+import { ViewInGraphLink } from "@/components/view-in-graph-link";
 import {
   EvidenceLabelBadge,
   EvidenceLegend,
@@ -148,11 +149,16 @@ function RunPanel({ run }: { run: DiscoveryRunSnapshot }) {
                         </p>
                       )
                     ) : null}
-                    {prospect.companyId ? (
-                      <div className="mt-2">
+                    <div className="mt-2 flex flex-wrap items-center gap-3">
+                      {prospect.companyId ? (
                         <DraftOutreachButton companyId={prospect.companyId} />
-                      </div>
-                    ) : null}
+                      ) : null}
+                      <ViewInGraphLink
+                        icpId={run.icpId}
+                        runId={run.id}
+                        prospectId={prospect.companyId}
+                      />
+                    </div>
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
                     <p>{prospect.fitScore}</p>
