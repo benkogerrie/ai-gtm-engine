@@ -7,6 +7,7 @@ import {
   safeEqual,
   signSessionValue,
 } from "@/lib/auth";
+import { safeLoginRedirect } from "@/lib/login-redirect";
 import { SESSION_COOKIE, sessionCookieOptions } from "@/lib/session";
 
 export type LoginState = { error?: string };
@@ -35,8 +36,7 @@ export async function loginAction(
     sessionCookieOptions(),
   );
 
-  const next = String(formData.get("next") ?? "/intake");
-  redirect(next.startsWith("/") ? next : "/intake");
+  redirect(safeLoginRedirect(formData.get("next")));
 }
 
 export async function logoutAction(): Promise<void> {

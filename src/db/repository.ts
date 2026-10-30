@@ -318,6 +318,38 @@ export async function getCompany(db: AppDatabase, id: string) {
   return row ?? null;
 }
 
+export async function getCompanyForOrg(
+  db: AppDatabase,
+  id: string,
+  orgId: string,
+) {
+  const [row] = await db
+    .select()
+    .from(companies)
+    .where(and(eq(companies.id, id), eq(companies.orgId, orgId)));
+  return row ?? null;
+}
+
+export async function listCompanies(db: AppDatabase, orgId: string) {
+  return db
+    .select()
+    .from(companies)
+    .where(eq(companies.orgId, orgId))
+    .orderBy(desc(companies.updatedAt));
+}
+
+export async function listSignalsForCompany(
+  db: AppDatabase,
+  orgId: string,
+  companyId: string,
+) {
+  return db
+    .select()
+    .from(signals)
+    .where(and(eq(signals.orgId, orgId), eq(signals.companyId, companyId)))
+    .orderBy(desc(signals.updatedAt));
+}
+
 const COMPANY_EVIDENCE_FIELDS = [
   "name",
   "domain",
@@ -587,6 +619,143 @@ export async function createOutreach(
 export async function getOutreach(db: AppDatabase, id: string) {
   const [row] = await db.select().from(outreach).where(eq(outreach.id, id));
   return row ?? null;
+}
+
+export async function getOutreachForOrg(
+  db: AppDatabase,
+  id: string,
+  orgId: string,
+) {
+  const [row] = await db
+    .select()
+    .from(outreach)
+    .where(and(eq(outreach.id, id), eq(outreach.orgId, orgId)));
+  return row ?? null;
+}
+
+export async function listOutreachForOrg(db: AppDatabase, orgId: string) {
+  return db
+    .select({
+      id: outreach.id,
+      orgId: outreach.orgId,
+      companyId: outreach.companyId,
+      channel: outreach.channel,
+      subject: outreach.subject,
+      body: outreach.body,
+      status: outreach.status,
+      dryRun: outreach.dryRun,
+      variant: outreach.variant,
+      sentAt: outreach.sentAt,
+      createdAt: outreach.createdAt,
+      updatedAt: outreach.updatedAt,
+      companyName: companies.name,
+      companyDomain: companies.domain,
+    })
+    .from(outreach)
+    .leftJoin(companies, eq(outreach.companyId, companies.id))
+    .where(eq(outreach.orgId, orgId))
+    .orderBy(desc(outreach.updatedAt));
+}
+
+export async function updateOutreach(
+  db: AppDatabase,
+  id: string,
+  orgId: string,
+  patch: Partial<{
+    subject: string | null;
+    body: string;
+    variant: string | null;
+    status: OutreachStatus;
+  }>,
+  actor: MutationActor,
+  action = "outreach.edit",
+) {
+  const current = await getOutreachForOrg(db, id, orgId);
+  if (!current) {
+    throw new DomainError(
+      "OUTREACH_NOT_FOUND",
+      `Outreach ${id} was not found for this org`,
+    );
+  }
+  if (patch.status && patch.status !== current.status) {
+    assertOutreachTransition(current.status, patch.status);
+    assertDryRunCannotBeSent({ status: patch.status, dryRun: current.dryRun });
+    assertDryRunCompleted({ status: patch.status, dryRun: current.dryRun });
+  }
+
+  const stamped = now();
+  const next = { ...patch, updatedAt: stamped };
+  return withAudit(
+    db,
+    {
+      orgId: current.orgId,
+      actor,
+      action,
+      entityType: "outreach",
+      entityId: current.id,
+      before: current,
+      after: { ...current, ...next },
+    },
+    async (tx) => {
+      const [updated] = await tx
+        .update(outreach)
+        .set(next)
+        .where(eq(outreach.id, current.id))
+        .returning();
+      return updated;
+    },
+  );
+}
+
+export async function listFieldAssertionsWithCitations(
+  db: AppDatabase,
+  orgId: string,
+  entityType: EntityType,
+  entityIds: string[],
+) {
+  if (entityIds.length === 0) {
+    return [];
+  }
+
+  const assertions = await db
+    .select()
+    .from(fieldAssertions)
+    .where(
+      and(
+        eq(fieldAssertions.orgId, orgId),
+        eq(fieldAssertions.entityType, entityType),
+        inArray(fieldAssertions.entityId, entityIds),
+      ),
+    );
+
+  const assertionIds = assertions.map((assertion) => assertion.id);
+  const links = assertionIds.length
+    ? await db
+        .select()
+        .from(fieldAssertionCitations)
+        .where(inArray(fieldAssertionCitations.assertionId, assertionIds))
+    : [];
+  const citationIds = [...new Set(links.map((link) => link.citationId))];
+  const citationRows = citationIds.length
+    ? await db.select().from(citations).where(inArray(citations.id, citationIds))
+    : [];
+  const citationsById = new Map(
+    citationRows.map((citation) => [citation.id, citation]),
+  );
+  const citationsByAssertion = new Map<string, typeof citationRows>();
+  for (const link of links) {
+    const list = citationsByAssertion.get(link.assertionId) ?? [];
+    const citation = citationsById.get(link.citationId);
+    if (citation) {
+      list.push(citation);
+    }
+    citationsByAssertion.set(link.assertionId, list);
+  }
+
+  return assertions.map((assertion) => ({
+    ...assertion,
+    citations: citationsByAssertion.get(assertion.id) ?? [],
+  }));
 }
 
 export async function getLatestOutreachApproval(

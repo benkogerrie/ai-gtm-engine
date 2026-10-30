@@ -1,6 +1,7 @@
 import { connection } from "next/server";
 import { AppShell } from "@/components/app-shell";
 import { LoginForm } from "@/components/login-form";
+import { safeLoginRedirect } from "@/lib/login-redirect";
 import { isAuthConfigured } from "@/lib/session";
 
 export const instant = false;
@@ -12,7 +13,7 @@ export default async function LoginPage({
 }) {
   await connection();
   const params = await searchParams;
-  const next = params.next && params.next.startsWith("/") ? params.next : "/intake";
+  const next = safeLoginRedirect(params.next);
 
   return (
     <AppShell eyebrow="B003 · Sign in">
