@@ -1,6 +1,8 @@
 import { connection } from "next/server";
+import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { LoginForm } from "@/components/login-form";
+import { isPublicDemoMode } from "@/lib/demo-mode";
 import { safeLoginRedirect } from "@/lib/login-redirect";
 import { isAuthConfigured } from "@/lib/session";
 
@@ -14,6 +16,9 @@ export default async function LoginPage({
   await connection();
   const params = await searchParams;
   const next = safeLoginRedirect(params.next);
+  if (isPublicDemoMode()) {
+    redirect(next);
+  }
 
   return (
     <AppShell eyebrow="B003 · Sign in">

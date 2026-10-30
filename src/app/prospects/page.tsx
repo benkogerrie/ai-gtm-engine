@@ -297,6 +297,12 @@ async function ProspectsBody({
           Product summary and at least one industry are required.
         </p>
       ) : null}
+      {params.error === "rate" ? (
+        <p className="mb-4 text-sm text-destructive" role="alert">
+          This demo allows a limited number of discovery runs. Please try again
+          later.
+        </p>
+      ) : null}
       <p className="mb-4 text-xs text-muted-foreground">
         Search {configured.search ? "configured" : "MOCK (no Brave key)"} · LLM{" "}
         {configured.llm ? "configured" : "MOCK (no DeepSeek key)"}

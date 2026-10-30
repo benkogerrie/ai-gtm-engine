@@ -5,6 +5,7 @@ import {
   readConfiguredSecret,
   type AuthContext,
 } from "@/lib/auth";
+import { readDemoAuth } from "@/lib/demo-mode";
 
 export { SESSION_COOKIE };
 
@@ -22,6 +23,10 @@ export function sessionCookieOptions() {
 }
 
 export async function getPageAuth(): Promise<AuthContext | null> {
+  const demo = readDemoAuth();
+  if (demo) {
+    return demo;
+  }
   const jar = await cookies();
   return authFromSessionCookie(jar.get(SESSION_COOKIE)?.value);
 }

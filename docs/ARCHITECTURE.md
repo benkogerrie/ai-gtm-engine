@@ -53,8 +53,9 @@ flowchart TB
   repo --> audit["append-only audit_events"]
 ```
 
-- **Pages** (`/intake`, `/icp`, `/prospects`, `/outreach`, `/dashboard`, `/graph`): `src/proxy.ts` redirects unauthenticated browsers to `/login?next=…`. The `next` target is allowlisted in `src/lib/login-redirect.ts`. After login the cookie is signed with `APP_API_TOKEN` and does not carry `orgId`.
-- **Data APIs**: `getAuthContext` accepts the bearer token **or** the session cookie. Missing/invalid auth → **401**. Invalid bodies → **400**. Domain-rule violations → **400** with `{ code }`.
+- **Pages** (`/intake`, `/icp`, `/prospects`, `/outreach`, `/dashboard`, `/pipeline`, `/graph`): `src/proxy.ts` redirects unauthenticated browsers to `/login?next=…`. The `next` target is allowlisted in `src/lib/login-redirect.ts`. After login the cookie is signed with `APP_API_TOKEN` and does not carry `orgId`.
+- **Public demo**: `PUBLIC_DEMO_MODE=true` (or unset on Vercel Preview) skips the token/cookie gate. `getPageAuth` / `getAuthContext` / `proxy` map to the server `APP_ORG_ID` and a human demo actor. `/login` redirects to `/intake` (or `next`). `PUBLIC_DEMO_MODE=false` restores token auth. Expensive demo actions are rate-limited in `src/lib/demo-rate-limit.ts`.
+- **Data APIs**: `getAuthContext` accepts the bearer token **or** the session cookie (or demo mapping). Missing/invalid auth → **401**. Invalid bodies → **400**. Domain-rule violations → **400** with `{ code }`. Demo rate-limit exceeded → **429**.
 - **Public**: `GET /api/health`, `GET /api/llm/health`, `GET /api/search/health` (health routes read env only and never return keys).
 
 ## Repository layout
@@ -206,7 +207,7 @@ MOCK runs are labeled. Empty runs show an honest empty state. No sample graph is
 | GET/POST | `/api/outreach` | required | |
 | GET/POST | `/api/outreach/[id]` | required | POST actions: `edit`, `regenerate`, `approve`, `reject`, `dry-run` |
 
-Pages: `/`, `/login`, `/intake`, `/icp`, `/icp/[id]`, `/prospects`, `/outreach`, `/outreach/new`, `/outreach/[id]`, `/dashboard`, `/graph`.
+Pages: `/`, `/login`, `/intake`, `/icp`, `/icp/[id]`, `/prospects`, `/outreach`, `/outreach/new`, `/outreach/[id]`, `/dashboard`, `/pipeline`, `/graph`.
 
 ## Testing and deploy
 

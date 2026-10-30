@@ -42,6 +42,17 @@ describe("proxy auth gate", () => {
     expect(location).toContain("next=%2Fgraph");
   });
 
+  it("allows app pages without a cookie in public demo mode", () => {
+    process.env.PUBLIC_DEMO_MODE = "true";
+    process.env.APP_ORG_ID = "11111111-1111-4111-8111-111111111111";
+    const response = proxy(new NextRequest("http://localhost/intake"));
+    expect(response.status).toBeLessThan(300);
+    expect(response.headers.get("location")).toBeNull();
+    const graph = proxy(new NextRequest("http://localhost/graph"));
+    expect(graph.status).toBeLessThan(300);
+    expect(graph.headers.get("location")).toBeNull();
+  });
+
   it("redirects unauthenticated /outreach/[id] to /login", () => {
     installTestAuth();
     const response = proxy(

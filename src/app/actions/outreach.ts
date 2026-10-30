@@ -16,6 +16,7 @@ import {
   seedDemoCompany,
   sendOutreachDryRun,
 } from "@/lib/outreach";
+import { demoActionRateLimit } from "@/lib/demo-rate-limit";
 import { getPageAuth } from "@/lib/session";
 
 export type OutreachActionState = { error?: string; nextId?: string };
@@ -51,6 +52,11 @@ export async function draftOutreachAction(
   }
   if (!tone.success || !cta.success) {
     return { error: "Tone must be professional | friendly | direct. CTA must be book a call | reply | learn more." };
+  }
+
+  const limited = await demoActionRateLimit("outreach_draft");
+  if (limited) {
+    return limited;
   }
 
   try {
@@ -115,6 +121,10 @@ export async function regenerateOutreachAction(
   const cta = outreachCtaSchema.safeParse(input.cta);
   if (!tone.success || !cta.success) {
     return { error: "Invalid tone or CTA." };
+  }
+  const limited = await demoActionRateLimit("outreach_draft");
+  if (limited) {
+    return limited;
   }
   try {
     const db = await getDb();
