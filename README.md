@@ -31,7 +31,7 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000). Health check: [http://localhost:3000/api/health](http://localhost:3000/api/health).
 
-`.env.example` lists empty, commented placeholders for future integrations (LLM provider, Tavily, Serper, Neo4j / Kùzu, Hunter, Apollo, SendGrid, Flexprice). Do not put real secrets in the repository.
+`.env.example` lists empty, commented placeholders for integrations (DeepSeek LLM, Tavily, Serper, Neo4j / Kùzu, Hunter, Apollo, SendGrid, Flexprice). Do not put real secrets in the repository. LLM usage is documented in [`docs/llm.md`](./docs/llm.md).
 
 ## Scripts
 
@@ -42,7 +42,8 @@ Open [http://localhost:3000](http://localhost:3000). Health check: [http://local
 | `start` | `pnpm start` | Serve the production build |
 | `lint` | `pnpm lint` | ESLint |
 | `typecheck` | `pnpm typecheck` | `tsc --noEmit` |
-| `test` | `pnpm test` | Vitest (single run) |
+| `test` | `pnpm test` | Vitest (single run; excludes live smoke) |
+| `test:live` | `pnpm test:live` | Optional DeepSeek smoke; skips if `DEEPSEEK_API_KEY` is unset |
 
 ## CI
 
