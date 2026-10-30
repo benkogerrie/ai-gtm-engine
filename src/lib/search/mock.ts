@@ -10,6 +10,10 @@ export type MockSearchClientOptions = {
 
 const DEFAULT_RETRIEVED_AT = new Date(0).toISOString();
 
+function asSynthetic(results: SearchResult[]): SearchResult[] {
+  return results.map((result) => ({ ...result, source: "mock" }));
+}
+
 export class MockSearchClient implements SearchClient {
   readonly provider = "mock" as const;
   private readonly options: MockSearchClientOptions;
@@ -23,11 +27,11 @@ export class MockSearchClient implements SearchClient {
     options?: SearchOptions,
   ): Promise<SearchResult[]> {
     if (this.options.handler) {
-      return this.options.handler(query, options);
+      return asSynthetic(await this.options.handler(query, options));
     }
 
     if (this.options.results) {
-      return this.options.results;
+      return asSynthetic(this.options.results);
     }
 
     return [
@@ -35,7 +39,7 @@ export class MockSearchClient implements SearchClient {
         title: `Mock result for ${query}`,
         url: "https://example.com/mock",
         snippet: "Synthetic search hit for keyless runs and unit tests.",
-        source: "brave",
+        source: "mock",
         retrievedAt: DEFAULT_RETRIEVED_AT,
       },
     ];

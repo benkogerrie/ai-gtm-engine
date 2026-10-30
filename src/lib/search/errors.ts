@@ -4,6 +4,7 @@ export const SEARCH_ERROR_CODES = {
   TIMEOUT: "TIMEOUT",
   INVALID_REQUEST: "INVALID_REQUEST",
   INVALID_RESPONSE: "INVALID_RESPONSE",
+  SYNTHETIC_EVIDENCE: "SYNTHETIC_EVIDENCE",
 } as const;
 
 export type SearchErrorCode =
@@ -68,6 +69,14 @@ export class SearchInvalidRequestError extends SearchError {
 export class SearchInvalidResponseError extends SearchError {
   constructor(message: string, options?: { cause?: unknown }) {
     super(message, SEARCH_ERROR_CODES.INVALID_RESPONSE, options);
+  }
+}
+
+export class SearchSyntheticEvidenceError extends SearchError {
+  constructor(
+    message = "Synthetic search results (source: mock) cannot become citations.",
+  ) {
+    super(message, SEARCH_ERROR_CODES.SYNTHETIC_EVIDENCE);
   }
 }
 

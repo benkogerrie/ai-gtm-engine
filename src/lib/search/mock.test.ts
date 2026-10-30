@@ -17,7 +17,7 @@ describe("MockSearchClient", () => {
           title: "Fake hit",
           url: "https://example.com/fake",
           snippet: "not from the network",
-          source: "brave",
+          source: "mock",
           retrievedAt: new Date(0).toISOString(),
         },
       ],
@@ -27,6 +27,27 @@ describe("MockSearchClient", () => {
     expect(client.provider).toBe("mock");
     expect(results).toHaveLength(1);
     expect(results[0]?.title).toBe("Fake hit");
+  });
+
+  it("labels default mock hits source mock", async () => {
+    const results = await createMockSearchClient().search("ping");
+    expect(results[0]?.source).toBe("mock");
+  });
+
+  it("relabels configured source brave hits as mock", async () => {
+    const results = await createMockSearchClient({
+      results: [
+        {
+          title: "Sneaky",
+          url: "https://example.com/sneaky",
+          snippet: "must not look like Brave",
+          source: "brave",
+          retrievedAt: new Date(0).toISOString(),
+        },
+      ],
+    }).search("sneaky");
+
+    expect(results[0]?.source).toBe("mock");
   });
 });
 

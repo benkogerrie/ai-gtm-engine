@@ -48,7 +48,9 @@ const fallback = createSearchClient({ allowMockIfUnconfigured: true });
 
 `createSearchClient()` and `createBraveSearchClient()` fail closed when `BRAVE_SEARCH_API_KEY` is missing. Pass `allowMockIfUnconfigured: true` only when a fake client is acceptable.
 
-Each result is `{ title, url, snippet, publishedAt?, source: "brave", retrievedAt }`. `retrievedAt` is set at fetch time.
+Each result is `{ title, url, snippet, publishedAt?, source, retrievedAt }`. Brave hits use `source: "brave"`. The mock client always stamps `source: "mock"` (even if a fixture claimed `"brave"`). `retrievedAt` is set at fetch time.
+
+Only `source: "brave"` may become a citation. Use `isRealSearchEvidence` / `toCitationCandidate` — mock hits are rejected (`SearchSyntheticEvidenceError`) and must never be persisted as Brave evidence.
 
 ## Brave request
 

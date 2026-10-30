@@ -35,14 +35,17 @@ export {
   SearchInvalidRequestError,
   SearchInvalidResponseError,
   SearchMissingApiKeyError,
+  SearchSyntheticEvidenceError,
   SearchTimeoutError,
   isSearchError,
 } from "./errors";
+export { isRealSearchEvidence, toCitationCandidate } from "./evidence";
 export { MockSearchClient, createMockSearchClient } from "./mock";
 export type { MockSearchClientOptions } from "./mock";
 export { SearchRateLimiter } from "./rate-limit";
 export { dedupeSearchUrls, normalizeSearchUrl } from "./url";
 export type {
+  CitationCandidate,
   SearchClient,
   SearchOptions,
   SearchProvider,

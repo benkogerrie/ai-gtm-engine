@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BRAVE_SEARCH_ENDPOINT } from "./config";
 import { createBraveSearchClient } from "./brave";
+import { isRealSearchEvidence } from "./evidence";
 import { SearchMissingApiKeyError, SearchTimeoutError } from "./errors";
 
 const ORIGINAL_ENV = { ...process.env };
@@ -109,6 +110,8 @@ describe("BraveSearchClient", () => {
       },
     ]);
 
+    expect(results.every((item) => item.source === "brave")).toBe(true);
+    expect(results.every((item) => isRealSearchEvidence(item))).toBe(true);
     expect(fetchFn).toHaveBeenCalledTimes(1);
     const [url, init] = requestCall(fetchFn, 0);
     const parsed = new URL(url);
