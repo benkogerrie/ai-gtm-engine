@@ -89,11 +89,13 @@ Zod schemas in `src/domain/*` name every field. Drizzle tables in `src/db/schema
 Invariants that every later slice must keep:
 
 1. **Unknown ≠ verified.** A field without an assertion is `UNVERIFIED`. The engine must not invent a value and mark it verified.
-2. **`VERIFIED` needs a citation** with `sourceUrl` and `retrievedAt`. Enforced in `src/domain/rules.ts`.
-3. **Fictional / EXAMPLE `.example` URLs stay `UNVERIFIED`.**
-4. **`INFERRED` is allowed without a URL** (model guess). Fit scores and rationales are always `INFERRED`.
+2. **`VERIFIED`** means the claim is backed by a real, retrieved, cited source URL (`sourceUrl` + `retrievedAt` on a Citation). Enforced in `src/domain/rules.ts`. It is **not** independently verified by a human or a second source. Discovery claim text is extracted by DeepSeek. `createFieldAssertion` rejects `VERIFIED` unless at least one linked citation has both fields. From the rule: *“A URL and timestamp are necessary but do not by themselves prove the claim is true.”*
+3. **`INFERRED`** is model judgement without a source treated as proof: fit score, rationale, and ICP fields. Allowed without a URL. It is not treated as verified.
+4. **`source-candidate`** is a search hit or claim whose URL is not among the verified retrieved results for that company.
 5. **Citations are first-class.** URL, retrieved-at, quote, SHA-256 hash, extractor (`agent` | `human`), same org as the assertion.
 6. **Every mutation is audited.** `withAudit` writes `audit_events` (`human` | `agent`, before/after JSON). The table is append-only (Postgres trigger; works in PGlite).
+
+Seed / data policy (not a domain rule): the TEST hospital seed uses `https://example.com` and is labeled demo. `.example` URLs are not code-enforced as `UNVERIFIED`.
 
 Discovery run snapshots live in `audit_events.after` (`discovery.run.*`). There is no `discovery_runs` table.
 
@@ -106,9 +108,9 @@ Callers depend on interfaces, not vendor types.
 | `LlmClient` (`chat`, `json`) | DeepSeek `/chat/completions` | `createMockLlmClient` | missing `DEEPSEEK_API_KEY` |
 | `SearchClient` (`search`) | Brave web search | `createMockSearchClient` | missing `BRAVE_SEARCH_API_KEY` |
 
-Both use platform `fetch`, timeouts via `AbortController`, and retries on **429 and 5xx only**. Search serializes calls at ≥1 req/s and rejects mock hits as citations (`isRealSearchEvidence` / `SearchSyntheticEvidenceError`).
+Both use platform `fetch`, timeouts via `AbortController`, and retries on **429 and 5xx only**. Search serializes calls at **at most 1 request per second** (`minIntervalMs` default 1000). Mock search hits cannot become citations (`isRealSearchEvidence` / `SearchSyntheticEvidenceError`).
 
-`createLlmClient({ allowMockIfUnconfigured: true })` and the search equivalent are the only paths that substitute a labeled mock. LIVE discovery with a missing LLM **fails** — no silent heuristic fallback.
+`createLlmClient()` and `createSearchClient()` fail closed when the matching key is missing. ICP (`src/lib/icp/infer.ts` `createIcpLlmClient`) and outreach (`src/lib/outreach/generate.ts` `createOutreachLlmClient`) call `createMockLlmClient` directly when `DEEPSEEK_API_KEY` is unset (outreach still requires live DeepSeek for real, non-TEST companies). Only discovery search uses `createSearchClient({ allowMockIfUnconfigured: true })`. A missing DeepSeek key does **not** fail discovery: `resolveMode` labels the run **MOCK** and uses heuristic extract/score.
 
 Details: [llm.md](./llm.md), [search.md](./search.md).
 
@@ -134,7 +136,7 @@ Not built on `main` yet: scoring/tiers as a standalone engine (B005), graph stor
 
 ### Discovery
 
-3–6 deterministic Brave queries aimed at **named buyer organizations** (not listicles). LIVE extract + score with DeepSeek. Heuristic extract is MOCK-only. Candidates are classified `buyer | vendor_competitor | media_research`. Only buyers become prospects. Claims whose URL is not in the result set are dropped. Persist `Company` + `Citation` + `FieldAssertion` as `INFERRED`. HCA-style duplicates collapse by normalized org name/domain. [discovery.md](./discovery.md).
+3–6 deterministic Brave queries aimed at **named buyer organizations** (not listicles). LIVE (`resolveMode`: Brave + DeepSeek) extract + score with DeepSeek. MOCK uses heuristic extract/score. Candidates are classified `buyer | vendor_competitor | media_research`. Only buyers become prospects. Claims whose URL is not in the result set are dropped. `persist.ts` writes cited fact claims (`name`, `domain`, …) as `VERIFIED` (citation `sourceUrl` + `retrievedAt` from the Brave hit). Only `fitScore` and `rationale` are stored as `INFERRED`. HCA-style duplicates collapse by normalized org name/domain. [discovery.md](./discovery.md).
 
 ### Outreach
 
@@ -142,19 +144,19 @@ Drafts are refused unless the company has a citation-backed signal or claim. The
 
 ### Dashboard
 
-`loadDashboard` pins to the latest **completed** discovery run for the selected ICP (older completed runs stay selectable). One row per organization: fit score (`INFERRED`), rationale (`INFERRED`), cited evidence (`VERIFIED` / `INFERRED` / `source-candidate`).
+`loadDashboard` pins to the latest **completed** discovery run for the selected ICP (older completed runs stay selectable). One row per organization: fit score (`INFERRED`), rationale (`INFERRED`), cited evidence labeled `VERIFIED` / `INFERRED` / `source-candidate` (see Domain and evidence).
 
-Automatic board stages come **only** from recorded rows:
+Automatic board stages come **only** from recorded rows. `REJECTED` is a **separate branch**, not a step after dry-run. `deriveAutoStage` priority:
 
-`MATCHED → DRAFTED → APPROVED → DRY_RUN_SENT (DRY_RUN_COMPLETED audit) → REJECTED`
+`dryRun (DRY_RUN_SENT) > approved (APPROVED) > draft (DRAFTED) > rejected (REJECTED) > matched (MATCHED)`
 
-`REPLIED`, `MEETING_BOOKED`, `CLOSED_LOST` are **manual** human moves stored as `pipeline.stage.move` audit events. Auto stages cannot be entered without the matching record. Later stages are never fabricated.
+`REPLIED`, `MEETING_BOOKED`, and `CLOSED_LOST` are **manual** human-asserted stages stored as `pipeline.stage.move` audit events (actor + timestamp). They are not system-verified. Auto stages cannot be entered without the matching record.
 
 ## Persistence
 
 - Migrations in `drizzle/` (`0000_domain_model`, `0001_cto_review_guards`, `0002_icp_engine`). Applied by `pnpm db:migrate`, tests, and the first API request.
-- `DATABASE_URL` set → `pg`. Empty → PGlite (local `.pglite/`; memory on Vercel and in tests).
-- PGlite on Vercel serverless is **not durable**. Preview boots an empty in-memory database.
+- `DATABASE_URL` set → `pg`. Unset → in-process PGlite (local default `.pglite/`; memory in tests).
+- Vercel Preview uses Postgres via `DATABASE_URL` (Neon), not in-memory PGlite.
 - B004 and B008 add no migration. Discovery runs and extra outreach fields reuse `audit_events` and `outreach.variant` JSON.
 
 ## HTTP surfaces
@@ -168,10 +170,10 @@ Automatic board stages come **only** from recorded rows:
 | GET | `/api/companies/[id]` | required | Company + field evidence for the server org |
 | POST | `/api/citations` | required | |
 | GET | `/api/audit` | required | |
-| GET/POST | `/api/discovery/runs` | required | `maxDuration` 60s |
+| POST | `/api/discovery/runs` | required | `maxDuration` 60s |
 | GET | `/api/discovery/runs/[id]` | required | |
 | GET/POST | `/api/outreach` | required | |
-| GET | `/api/outreach/[id]` | required | |
+| GET/POST | `/api/outreach/[id]` | required | POST actions: `edit`, `regenerate`, `approve`, `reject`, `dry-run` |
 
 Pages: `/`, `/login`, `/intake`, `/icp`, `/icp/[id]`, `/prospects`, `/outreach`, `/outreach/new`, `/outreach/[id]`, `/dashboard`.
 
@@ -180,6 +182,10 @@ Pages: `/`, `/login`, `/intake`, `/icp`, `/icp/[id]`, `/prospects`, `/outreach`,
 - `pnpm test` — unit + component; live files excluded.
 - `pnpm test:live` — DeepSeek / Brave / integrated ShiftPilot flow; skips when keys are unset; excluded from CI.
 - Preview: opening a PR is enough. Do not run `vercel` CLI deploys from this repository. Do not put real secrets in git.
+
+## Known limitations
+
+- If Brave is configured but DeepSeek is not, `resolveMode` labels the run **MOCK** and heuristic extract/score still runs. Because `search.provider !== "mock"`, `persistProspects` (`src/lib/discovery/pipeline.ts` ~L300) may persist those prospects. Tracked as follow-up; not fixed during freeze.
 
 ## Related docs
 

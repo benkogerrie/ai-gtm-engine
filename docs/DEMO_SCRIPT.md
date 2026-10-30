@@ -45,7 +45,7 @@ Open [http://localhost:3000](http://localhost:3000). Optional health:
 - [http://localhost:3000/api/llm/health](http://localhost:3000/api/llm/health) — `{ configured: true }` when DeepSeek is set
 - [http://localhost:3000/api/search/health](http://localhost:3000/api/search/health) — `{ configured: true }` when Brave is set
 
-A Vercel preview of this branch is equivalent: sign in with the preview `APP_API_TOKEN`. Preview PGlite is in-memory and empty on every cold start.
+A Vercel preview of this branch is equivalent: sign in with the preview `APP_API_TOKEN`. Preview uses Postgres via `DATABASE_URL` (Neon), not in-memory PGlite.
 
 ## Sample copy (ShiftPilot)
 
@@ -92,8 +92,8 @@ Expect: inferred fields are never labeled **VERIFIED**. Approve is an explicit h
 
 1. Wait for the run (Brave is rate-limited to ~1 req/s; budget about a minute).
 2. Confirm the **LIVE** badge and `Path: DeepSeek extraction + scoring`.
-3. Confirm **≥ 3** distinct **organization** names (Ochsner Health, UCHealth, …) — not article titles or “Top 10 hospitals” listicles.
-4. Each row has a fit score (**INFERRED**), a rationale grounded in the cited signal (**INFERRED**), and at least one `https` source. Legend: **VERIFIED** = cited source URL, **INFERRED** = AI judgement, **source-candidate** = search hit not yet a verified fact.
+3. Confirm **≥ 3** distinct **organization** names — not article titles or “Top 10 hospitals” listicles. Results vary per live run; a recent run returned Mercy, HCA Healthcare, and Nebraska Methodist Health System.
+4. Each row has a fit score (**INFERRED**), a rationale (**INFERRED**), and at least one `https` source. Labels: **VERIFIED** = backed by a real, retrieved, cited source URL — not independently verified by a human or a second source; claim text is extracted by DeepSeek; a URL and timestamp do not by themselves prove the claim is true. **INFERRED** = model judgement without a source treated as proof (fit score, rationale, ICP fields). **source-candidate** = a hit or claim whose URL is not among the verified retrieved results.
 5. Duplicates of the same system (HCA-style) collapse to one org with aggregated evidence.
 
 Expect: vendor/competitor names and media/research subjects are not in the buyer table. MOCK search hits never appear as citations.
@@ -121,7 +121,7 @@ Expect: status → `DRY_RUN_COMPLETED`. `sentAt` stays empty. The hospital is no
 3. Pipeline board: the hospital you just dry-ran sits in **Dry-run sent**. Counts per stage and per channel (email / LinkedIn) match the cards.
 4. Optional: move a card to **Replied** / **Meeting booked** / **Closed/Lost**. The card shows `manual` + actor + timestamp.
 
-Expect: you cannot move a card into **Approved** or **Dry-run sent** without the matching record. No fabricated replies or sends.
+Expect: you cannot move a card into **Approved** or **Dry-run sent** without the matching record. Manual stages (Replied / Meeting booked / Closed/Lost) are human-asserted and audited with actor + timestamp; they are not system-verified.
 
 ## Fallback when keys are missing
 
@@ -135,12 +135,16 @@ The loop still works; treat everything as labeled fixture data.
 
 ## What is not a bug
 
-- Preview data disappearing after a cold start (in-memory PGlite, no `DATABASE_URL`).
-- Discovery taking ~30–60s (Brave 1 req/s × several queries + DeepSeek extract/score).
-- Fit scores in the 40s when only peripheral nursing-coverage evidence was found (strong scheduling/staffing evidence is required for a higher band).
+- Local data lives in PGlite only while `DATABASE_URL` is unset (default `.pglite/` on disk). Vercel Preview uses Postgres (Neon) via `DATABASE_URL`.
+- Discovery taking ~30–60s (Brave at most 1 req/s × several queries + DeepSeek extract/score).
+- Peripheral-only evidence (nursing/hospital mention without scheduling or staffing operations) is capped at a fit score of **54**.
 - **Knowledge Graph** on the home page still **Coming soon** (B006). `relationship_edges` exist in Postgres only.
 - No real email, LinkedIn, or SMS send. `SENT` is a domain state; the UI only offers dry-run.
 - `pnpm test:live` skipping in CI or this environment when keys are unset.
+
+## Known limitations
+
+- If Brave is configured but DeepSeek is not, a heuristic **MOCK** discovery run may still persist prospects (`src/lib/discovery/pipeline.ts` ~L300). Tracked as follow-up; not fixed during freeze.
 
 ## Timing
 
