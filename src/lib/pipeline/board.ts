@@ -6,10 +6,12 @@ import {
   listIcpsForOrg,
   listOutreachForOrg,
 } from "@/db/repository";
+import { isOutsideIcpGeography } from "@/lib/discovery/geography";
 import { labelDiscoveryClaim } from "@/lib/discovery/labels";
 import { aggregateByOrganization } from "@/lib/discovery/names";
 import { listDiscoveryRuns } from "@/lib/discovery/runs";
 import type {
+  DiscoveryRunSnapshot,
   EvidenceLabel,
   EvidenceRelevance,
   ScoredProspect,
@@ -58,13 +60,46 @@ export type DashboardCard = {
   evidence: DashboardEvidence[];
 };
 
+export type DashboardRunOption = {
+  id: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  prospectCount: number;
+};
+
 export type DashboardSnapshot = {
   icp: DashboardIcpOption | null;
   icps: DashboardIcpOption[];
+  run: DashboardRunOption | null;
+  runs: DashboardRunOption[];
   cards: DashboardCard[];
   stageCounts: Record<PipelineStage, number>;
   channelCounts: { email: number; linkedin: number };
 };
+
+export function selectDashboardRun(
+  runs: DiscoveryRunSnapshot[],
+  requestedRunId?: string,
+): DiscoveryRunSnapshot | null {
+  const completed = runs.filter((run) => run.status === "completed");
+  if (requestedRunId) {
+    return (
+      completed.find((run) => run.id === requestedRunId) ?? completed[0] ?? null
+    );
+  }
+  return completed[0] ?? null;
+}
+
+function toRunOption(run: DiscoveryRunSnapshot): DashboardRunOption {
+  return {
+    id: run.id,
+    status: run.status,
+    createdAt: run.createdAt,
+    updatedAt: run.updatedAt,
+    prospectCount: run.prospects.length,
+  };
+}
 
 function emptyCounts(): Record<PipelineStage, number> {
   return Object.fromEntries(PIPELINE_STAGES.map((stage) => [stage, 0])) as Record<
@@ -115,7 +150,7 @@ function recordsFromOutreach(
 export async function loadDashboard(
   db: AppDatabase,
   orgId: string,
-  selectedIcpId?: string,
+  options: { icpId?: string; runId?: string } = {},
 ): Promise<DashboardSnapshot> {
   const icpRows = await listIcpsForOrg(db, orgId);
   const icps: DashboardIcpOption[] = icpRows.map((row) => ({
@@ -128,19 +163,25 @@ export async function loadDashboard(
     .filter((icp) => icp.status === "APPROVED")
     .sort((left, right) => (right.approvedAt ?? "").localeCompare(left.approvedAt ?? ""));
   const selected =
-    (selectedIcpId
-      ? icps.find((icp) => icp.id === selectedIcpId)
+    (options.icpId
+      ? icps.find((icp) => icp.id === options.icpId)
       : undefined) ??
     approved[0] ??
     icps[0] ??
     null;
 
-  const runs = selected
+  const listed = selected
     ? await listDiscoveryRuns(db, orgId, { limit: 20, icpId: selected.id })
     : [];
-  const aggregated = aggregateByOrganization(
-    runs.flatMap((run) => run.prospects) as ScoredProspect[],
-  );
+  const completed = listed.filter((run) => run.status === "completed");
+  const selectedRun = selectDashboardRun(listed, options.runId);
+  const runProspects = selectedRun
+    ? (selectedRun.prospects as ScoredProspect[]).filter(
+        (prospect) =>
+          !isOutsideIcpGeography(prospect, selectedRun.input.geographies),
+      )
+    : [];
+  const aggregated = aggregateByOrganization(runProspects);
 
   const [companies, outreachRows, companyEvents, outreachEvents] = await Promise.all([
     listCompanies(db, orgId),
@@ -287,5 +328,13 @@ export async function loadDashboard(
     }
   }
 
-  return { icp: selected, icps, cards, stageCounts, channelCounts };
+  return {
+    icp: selected,
+    icps,
+    run: selectedRun ? toRunOption(selectedRun) : null,
+    runs: completed.map(toRunOption),
+    cards,
+    stageCounts,
+    channelCounts,
+  };
 }

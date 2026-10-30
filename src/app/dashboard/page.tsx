@@ -14,10 +14,14 @@ export const instant = false;
 
 function IcpPicker({
   snapshotIcpId,
+  snapshotRunId,
   icps,
+  runs,
 }: {
   snapshotIcpId: string | undefined;
+  snapshotRunId: string | undefined;
   icps: Array<{ id: string; name: string; status: string }>;
+  runs: Array<{ id: string; status: string; updatedAt: string; prospectCount: number }>;
 }) {
   return (
     <form className="flex flex-wrap items-end gap-3" method="get">
@@ -39,6 +43,25 @@ function IcpPicker({
           )}
         </select>
       </label>
+      <label className="block text-sm">
+        <span className="text-[var(--muted)]">Discovery run</span>
+        <select
+          name="run"
+          defaultValue={snapshotRunId ?? ""}
+          className="mt-1 rounded-md border border-[var(--rule)] bg-[var(--card)] px-3 py-2"
+        >
+          {runs.length === 0 ? (
+            <option value="">No completed runs</option>
+          ) : (
+            runs.map((run) => (
+              <option key={run.id} value={run.id}>
+                {run.id.slice(0, 8)} · {run.status} · {run.prospectCount} orgs ·{" "}
+                {new Date(run.updatedAt).toLocaleString()}
+              </option>
+            ))
+          )}
+        </select>
+      </label>
       <button
         type="submit"
         className="rounded-md border border-[var(--rule)] px-3 py-2 text-sm"
@@ -52,12 +75,19 @@ function IcpPicker({
 async function DashboardBody({
   searchParams,
 }: {
-  searchParams: Promise<{ icp?: string }>;
+  searchParams: Promise<{ icp?: string; run?: string }>;
 }) {
   await connection();
   const params = await searchParams;
-  const next = params.icp
-    ? `/dashboard?icp=${encodeURIComponent(params.icp)}`
+  const nextParams = new URLSearchParams();
+  if (params.icp) {
+    nextParams.set("icp", params.icp);
+  }
+  if (params.run) {
+    nextParams.set("run", params.run);
+  }
+  const next = nextParams.size
+    ? `/dashboard?${nextParams.toString()}`
     : "/dashboard";
   const auth = await getPageAuth();
   if (!auth) {
@@ -65,11 +95,19 @@ async function DashboardBody({
   }
 
   const db = await getDb();
-  const snapshot = await loadDashboard(db, auth.orgId, params.icp);
+  const snapshot = await loadDashboard(db, auth.orgId, {
+    icpId: params.icp,
+    runId: params.run,
+  });
 
   return (
     <>
-      <IcpPicker snapshotIcpId={snapshot.icp?.id} icps={snapshot.icps} />
+      <IcpPicker
+        snapshotIcpId={snapshot.icp?.id}
+        snapshotRunId={snapshot.run?.id}
+        icps={snapshot.icps}
+        runs={snapshot.runs}
+      />
       {snapshot.icp ? (
         <p className="mt-3 text-sm text-[var(--muted)]">
           Showing{" "}
@@ -77,6 +115,9 @@ async function DashboardBody({
             {snapshot.icp.name}
           </Link>{" "}
           · {snapshot.icp.status}
+          {snapshot.run
+            ? ` · run ${snapshot.run.id.slice(0, 8)} (${snapshot.run.status}, ${new Date(snapshot.run.updatedAt).toLocaleString()}, ${snapshot.run.prospectCount} orgs)`
+            : ""}
         </p>
       ) : (
         <p className="mt-3 text-sm text-[var(--muted)]">
@@ -192,7 +233,7 @@ async function DashboardBody({
 export default function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ icp?: string }>;
+  searchParams: Promise<{ icp?: string; run?: string }>;
 }) {
   return (
     <AppShell eyebrow="B009 · Pipeline" showLogout wide>

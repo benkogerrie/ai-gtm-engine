@@ -1,8 +1,10 @@
 export {
   loadDashboard,
+  selectDashboardRun,
   type DashboardCard,
   type DashboardEvidence,
   type DashboardIcpOption,
+  type DashboardRunOption,
   type DashboardSnapshot,
 } from "./board";
 export { latestManualStageForCompany, movePipelineCard } from "./move";

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { LlmMissingApiKeyError } from "@/lib/llm";
+import { sanitizeOutreachDraftCopy } from "./demo-wording";
 import { createOutreachLlmClient, groundDraft, isTestProspect } from "./generate";
 import type { CitedSignal } from "./schema";
 
@@ -52,6 +53,35 @@ describe("isTestProspect / createOutreachLlmClient", () => {
     const created = createOutreachLlmClient({ requireLive: false });
     expect(created.mode).toBe("mock");
     expect(created.client.provider).toBe("mock");
+  });
+});
+
+describe("sanitizeOutreachDraftCopy", () => {
+  it("strips labeled TEST draft wording from a real-company draft and keeps it for demos", () => {
+    const leaked = {
+      emailSubject: "TEST note after HCA Healthcare listed a night-shift role",
+      emailBody:
+        "Hello team at HCA Healthcare,\n\nWould you book a short call this week?\n\n— ShiftPilot (labeled TEST draft)",
+      linkedinMessage: "TEST / MOCK note for HCA Healthcare about scheduling.",
+      citedSignalIds: ["sig-1"],
+      sourceUrls: ["https://hcahealthcare.com/nurses"],
+    };
+
+    const real = sanitizeOutreachDraftCopy(leaked, {
+      companyName: "HCA Healthcare",
+      companyDomain: "hcahealthcare.com",
+    });
+    expect(real.emailSubject).not.toMatch(/TEST/i);
+    expect(real.emailBody).not.toMatch(/TEST|MOCK/i);
+    expect(real.emailBody).toContain("— ShiftPilot");
+    expect(real.linkedinMessage).not.toMatch(/TEST|MOCK/i);
+
+    const demo = sanitizeOutreachDraftCopy(leaked, {
+      companyName: "TEST — Example General Hospital",
+      companyDomain: "example.com",
+    });
+    expect(demo.emailBody).toContain("labeled TEST draft");
+    expect(demo.emailSubject).toContain("TEST");
   });
 });
 

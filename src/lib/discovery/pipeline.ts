@@ -32,6 +32,7 @@ import {
 } from "./filters";
 import { hostFromUrl } from "./filters";
 import { cleanText } from "./html";
+import { isOutsideIcpGeography } from "./geography";
 import { aggregateByOrganization } from "./names";
 import { persistCompetitorCategories, persistProspects } from "./persist";
 import { countryFromGeographies, buildCompetitorQuery, buildDiscoveryQueries } from "./queries";
@@ -286,7 +287,11 @@ export async function runDiscovery(
     });
 
     scored.sort((left, right) => right.fitScore - left.fitScore);
-    const top = scored.slice(0, 12);
+    const inGeography = scored.filter(
+      (prospect) => !isOutsideIcpGeography(prospect, input.geographies),
+    );
+    const droppedForGeography = scored.length - inGeography.length;
+    const top = inGeography.slice(0, 12);
 
     console.info("[discovery]", {
       runId,
@@ -356,7 +361,7 @@ export async function runDiscovery(
       prospects: persistedProspects,
       competitorCategories: persistedCategories,
       rejectedClaimCount: validated.rejectedClaimCount,
-      droppedCompanyCount: droppedForMissingCitation,
+      droppedCompanyCount: droppedForMissingCitation + droppedForGeography,
       extractionPath,
       scoringPath,
       updatedAt: (deps.now ?? (() => new Date()))().toISOString(),

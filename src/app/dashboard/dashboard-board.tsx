@@ -16,10 +16,12 @@ function StageColumn({
   stage,
   cards,
   icpId,
+  runId,
 }: {
   stage: PipelineStage;
   cards: DashboardCard[];
   icpId?: string;
+  runId?: string;
 }) {
   return (
     <section className="min-w-56 flex-1 rounded-lg border border-[var(--rule)] bg-[var(--card)] p-3">
@@ -59,7 +61,7 @@ function StageColumn({
                 </Link>
               ) : null}
             </div>
-            <MoveForm card={card} icpId={icpId} />
+            <MoveForm card={card} icpId={icpId} runId={runId} />
           </li>
         ))}
       </ul>
@@ -67,7 +69,15 @@ function StageColumn({
   );
 }
 
-function MoveForm({ card, icpId }: { card: DashboardCard; icpId?: string }) {
+function MoveForm({
+  card,
+  icpId,
+  runId,
+}: {
+  card: DashboardCard;
+  icpId?: string;
+  runId?: string;
+}) {
   const [state, action, pending] = useActionState(
     moveDashboardCardAction,
     {} as DashboardActionState,
@@ -76,6 +86,7 @@ function MoveForm({ card, icpId }: { card: DashboardCard; icpId?: string }) {
     <form action={action} className="mt-2 grid gap-2">
       <input type="hidden" name="companyId" value={card.companyId} />
       {icpId ? <input type="hidden" name="icpId" value={icpId} /> : null}
+      {runId ? <input type="hidden" name="runId" value={runId} /> : null}
       <label className="block text-[11px] text-[var(--muted)]">
         Move
         <select
@@ -137,6 +148,7 @@ export function DashboardBoard({ snapshot }: { snapshot: DashboardSnapshot }) {
               stage={stage}
               cards={byStage[stage]}
               icpId={snapshot.icp?.id}
+              runId={snapshot.run?.id}
             />
           ))}
         </div>

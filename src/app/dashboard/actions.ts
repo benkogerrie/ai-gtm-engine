@@ -22,7 +22,17 @@ export async function moveDashboardCardAction(
   formData: FormData,
 ): Promise<DashboardActionState> {
   const icpId = String(formData.get("icpId") ?? "").trim();
-  const next = icpId ? `/dashboard?icp=${encodeURIComponent(icpId)}` : "/dashboard";
+  const runId = String(formData.get("runId") ?? "").trim();
+  const nextParams = new URLSearchParams();
+  if (icpId) {
+    nextParams.set("icp", icpId);
+  }
+  if (runId) {
+    nextParams.set("run", runId);
+  }
+  const next = nextParams.size
+    ? `/dashboard?${nextParams.toString()}`
+    : "/dashboard";
   const auth = await requireAuth(next);
   const companyId = String(formData.get("companyId") ?? "").trim();
   const stageRaw = String(formData.get("stage") ?? "").trim();
@@ -32,7 +42,10 @@ export async function moveDashboardCardAction(
 
   try {
     const db = await getDb();
-    const snapshot = await loadDashboard(db, auth.orgId, icpId || undefined);
+    const snapshot = await loadDashboard(db, auth.orgId, {
+      icpId: icpId || undefined,
+      runId: runId || undefined,
+    });
     const card = snapshot.cards.find((item) => item.companyId === companyId);
     if (!card) {
       return { error: "That prospect is not on this dashboard." };
