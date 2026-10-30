@@ -205,7 +205,7 @@ export default function GraphPage({
   searchParams: Promise<{ icp?: string; run?: string; prospect?: string }>;
 }) {
   return (
-    <AppShell eyebrow="B014 · Knowledge graph" showLogout wide>
+    <AppShell eyebrow="B014 · Knowledge graph" showLogout wide full>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-serif text-4xl tracking-tight">Graph</h1>

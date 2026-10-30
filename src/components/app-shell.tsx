@@ -41,11 +41,13 @@ export function AppShell({
   eyebrow,
   showLogout = false,
   wide = false,
+  full = false,
 }: {
   children: ReactNode;
   eyebrow?: string;
   showLogout?: boolean;
   wide?: boolean;
+  full?: boolean;
 }) {
   return (
     <div className="flex min-h-full flex-col">
@@ -68,7 +70,7 @@ export function AppShell({
       <main
         className={cn(
           "mx-auto flex w-full flex-1 flex-col px-4 py-8 sm:px-5",
-          wide ? "max-w-6xl" : "max-w-5xl",
+          full ? "max-w-[96rem]" : wide ? "max-w-6xl" : "max-w-5xl",
         )}
       >
         {eyebrow ? (

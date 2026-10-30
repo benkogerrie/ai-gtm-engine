@@ -12,12 +12,12 @@ export type LaidOutEdge = {
 };
 
 const COLUMN_X: Record<GraphNodeType, number> = {
-  seller: 90,
-  icp: 250,
-  attribute: 430,
-  prospect: 640,
-  claim: 830,
-  source: 1000,
+  seller: 180,
+  icp: 460,
+  attribute: 820,
+  prospect: 1220,
+  claim: 1620,
+  source: 2000,
 };
 
 const COLUMN_ORDER: GraphNodeType[] = [
@@ -29,7 +29,7 @@ const COLUMN_ORDER: GraphNodeType[] = [
   "source",
 ];
 
-export const GRAPH_VIEWBOX = { width: 1120, height: 640 };
+export const GRAPH_VIEWBOX = { width: 2200, height: 720 };
 
 export function layoutKnowledgeGraph(graph: KnowledgeGraph): {
   nodes: LaidOutNode[];
@@ -49,7 +49,7 @@ export function layoutKnowledgeGraph(graph: KnowledgeGraph): {
   }
 
   const maxCount = Math.max(1, ...[...byType.values()].map((list) => list.length));
-  const height = Math.max(GRAPH_VIEWBOX.height, 80 + maxCount * 72);
+  const height = Math.max(GRAPH_VIEWBOX.height, 140 + maxCount * 92);
   const laid: LaidOutNode[] = [];
   const byId = new Map<string, LaidOutNode>();
 
