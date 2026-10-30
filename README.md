@@ -30,13 +30,13 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Health check: [http://localhost:3000/api/health](http://localhost:3000/api/health).
+Open [http://localhost:3000](http://localhost:3000). Health check: [http://localhost:3000/api/health](http://localhost:3000/api/health). Search provider health (env only, no Brave call): [http://localhost:3000/api/search/health](http://localhost:3000/api/search/health). LLM provider health: [http://localhost:3000/api/llm/health](http://localhost:3000/api/llm/health).
 
 `.env.example` lists empty placeholders. `DATABASE_URL=` is intentionally blank so local/dev/test use in-process [PGlite](https://pglite.dev) (no Docker, no secrets). Set `DATABASE_URL` later for a real Postgres (for example on Vercel). Optional `PGLITE_DATA_DIR` overrides the default `.pglite/` data directory used by `pnpm db:migrate`.
 
 Data APIs (`/api/products`, `/api/companies/*`, `/api/citations`, `/api/audit`) require `Authorization: Bearer $APP_API_TOKEN`. Org and actor are mapped server-side from `APP_ORG_ID` / `APP_ACTOR_ID` / `APP_ACTOR_TYPE` — never from the request. Leave those placeholders empty in the repo. `/api/health` stays public.
 
-LLM usage (DeepSeek) is documented in [`docs/llm.md`](./docs/llm.md). Domain model, evidence ledger, and verification rules: [docs/domain-model.md](./docs/domain-model.md). Product intake and ICP review: [docs/icp-engine.md](./docs/icp-engine.md) (`/login`, `/intake`, `/icp/[id]`).
+LLM usage (DeepSeek) is documented in [`docs/llm.md`](./docs/llm.md). Search usage (Brave) is documented in [`docs/search.md`](./docs/search.md). Domain model, evidence ledger, and verification rules: [docs/domain-model.md](./docs/domain-model.md). Product intake and ICP review: [docs/icp-engine.md](./docs/icp-engine.md) (`/login`, `/intake`, `/icp/[id]`).
 
 Do not put real secrets in the repository.
 
@@ -50,7 +50,7 @@ Do not put real secrets in the repository.
 | `lint` | `pnpm lint` | ESLint |
 | `typecheck` | `pnpm typecheck` | `tsc --noEmit` |
 | `test` | `pnpm test` | Vitest (single run; excludes live smoke) |
-| `test:live` | `pnpm test:live` | Optional DeepSeek smoke; skips if `DEEPSEEK_API_KEY` is unset |
+| `test:live` | `pnpm test:live` | Optional DeepSeek / Brave smoke; skips when the matching API key is unset |
 | `db:generate` | `pnpm db:generate` | Create a Drizzle SQL migration from `src/db/schema.ts` |
 | `db:migrate` | `pnpm db:migrate` | Apply committed migrations (PGlite if `DATABASE_URL` is empty) |
 | `db:seed` | `pnpm db:seed` | Insert clearly labeled EXAMPLE data only |
