@@ -9,12 +9,20 @@ export function HomePage() {
           <p className="text-sm font-medium tracking-[0.18em] uppercase">
             AI GTM Engine
           </p>
-          <Link
-            href="/intake"
-            className="text-xs tracking-wide text-[var(--muted)] uppercase hover:text-[var(--foreground)]"
-          >
-            Product intake
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/intake"
+              className="text-xs tracking-wide text-[var(--muted)] uppercase hover:text-[var(--foreground)]"
+            >
+              Product intake
+            </Link>
+            <Link
+              href="/outreach"
+              className="text-xs tracking-wide text-[var(--muted)] uppercase hover:text-[var(--foreground)]"
+            >
+              Outreach
+            </Link>
+          </div>
         </div>
       </header>
 
