@@ -54,6 +54,30 @@ Open [http://localhost:3000](http://localhost:3000). Health check: [http://local
 4. `pnpm test`
 5. `pnpm build`
 
+## Security
+
+`.github/workflows/security.yml` runs Snyk on every pull request, on pushes to `main`, and via `workflow_dispatch`. The job fails on high or critical findings.
+
+1. **SCA** — `snyk test --all-projects --dev --severity-threshold=high` (dependency vulnerabilities, including `devDependencies`)
+2. **SAST** — `snyk code test --severity-threshold=high` (first-party code)
+
+Reports are always uploaded as the `snyk-reports` Actions artifact (`snyk-sca.sarif`, `snyk-sca.json`, `snyk-code.sarif`, `snyk-code.json`). Download them from the workflow run. They are **not** uploaded to GitHub Code Scanning (this repository is private).
+
+The `SNYK_TOKEN` repository secret must be set in GitHub Actions. Do not commit a token.
+
+### Local
+
+Install the [Snyk CLI](https://docs.snyk.io/developer-tools/snyk-cli), authenticate, then run the same scans:
+
+```bash
+snyk auth
+pnpm install
+snyk test --all-projects --dev --severity-threshold=high
+snyk code test --severity-threshold=high
+```
+
+`snyk code test` requires Snyk Code to be enabled for the organization (Snyk Settings → Snyk Code).
+
 ## Deploy
 
 Preview deployments are created automatically by [Vercel](https://vercel.com)’s GitHub integration for every pull-request branch. Opening or updating a PR is enough; do not run `vercel` CLI deploy commands from this repository.
