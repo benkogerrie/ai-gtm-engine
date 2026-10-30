@@ -4,5 +4,6 @@ export * from "./entities";
 export * from "./enums";
 export * from "./errors";
 export * from "./evidence";
+export * from "./intake";
 export * from "./relationship";
 export * from "./rules";

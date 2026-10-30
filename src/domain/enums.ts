@@ -125,5 +125,35 @@ export const ICP_STATUSES = ["DRAFT", "APPROVED", "REJECTED"] as const;
 export const icpStatusSchema = z.enum(ICP_STATUSES);
 export type IcpStatus = z.infer<typeof icpStatusSchema>;
 
+export const INFERENCE_MODES = ["live", "mock"] as const;
+export const inferenceModeSchema = z.enum(INFERENCE_MODES);
+export type InferenceMode = z.infer<typeof inferenceModeSchema>;
+
+export const EXPANSION_KINDS = [
+  "ADJACENT_SEGMENT",
+  "EMERGING_VERTICAL",
+  "NON_OBVIOUS_APPLICATION",
+] as const;
+export const expansionKindSchema = z.enum(EXPANSION_KINDS);
+export type ExpansionKind = z.infer<typeof expansionKindSchema>;
+
+export const EXPANSION_DECISIONS = [
+  "PENDING",
+  "ACCEPTED",
+  "ADJUSTED",
+  "DISMISSED",
+] as const;
+export const expansionDecisionSchema = z.enum(EXPANSION_DECISIONS);
+export type ExpansionDecision = z.infer<typeof expansionDecisionSchema>;
+
+export const TRIGGER_EVENT_KINDS = [
+  "TECH_STACK_CHANGE",
+  "EXEC_HIRE",
+  "FUNDING",
+  "OTHER",
+] as const;
+export const triggerEventKindSchema = z.enum(TRIGGER_EVENT_KINDS);
+export type TriggerEventKind = z.infer<typeof triggerEventKindSchema>;
+
 export const fitScoreSchema = z.number().int().min(0).max(100);
 export const confidenceSchema = z.number().min(0).max(1);

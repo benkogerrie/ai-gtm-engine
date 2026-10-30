@@ -127,6 +127,12 @@ export const icps = pgTable(
     expansionSuggestions: jsonb("expansion_suggestions")
       .$type<string[]>()
       .notNull(),
+    version: integer("version").notNull().default(1),
+    parentIcpId: uuid("parent_icp_id"),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    approvedBy: text("approved_by"),
+    inferenceMode: text("inference_mode").notNull().default("mock"),
+    structured: jsonb("structured").$type<unknown>().notNull().default({}),
     ...timestamps,
   },
   (table) => [index("icps_org_id_idx").on(table.orgId)],

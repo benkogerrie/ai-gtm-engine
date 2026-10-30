@@ -1,5 +1,5 @@
 import { DomainError } from "./errors";
-import type { OutreachStatus, VerificationStatus } from "./enums";
+import type { IcpStatus, OutreachStatus, VerificationStatus } from "./enums";
 
 export type CitationEvidence = {
   sourceUrl?: string | null;
@@ -111,6 +111,24 @@ export function assertDryRunCompleted(input: {
     throw new DomainError(
       "INVALID_STATUS_TRANSITION",
       "DRY_RUN_COMPLETED is only valid when dryRun is true",
+    );
+  }
+}
+
+const ICP_TRANSITIONS: Record<IcpStatus, readonly IcpStatus[]> = {
+  DRAFT: ["APPROVED", "REJECTED"],
+  APPROVED: ["DRAFT"],
+  REJECTED: ["DRAFT"],
+};
+
+export function assertIcpTransition(from: IcpStatus, to: IcpStatus): void {
+  if (from === to) {
+    return;
+  }
+  if (!ICP_TRANSITIONS[from].includes(to)) {
+    throw new DomainError(
+      "INVALID_STATUS_TRANSITION",
+      `ICP cannot move from ${from} to ${to}`,
     );
   }
 }

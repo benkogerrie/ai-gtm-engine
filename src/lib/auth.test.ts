@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { getAuthContext } from "./auth";
+import {
+  SESSION_COOKIE,
+  getAuthContext,
+  signSessionValue,
+  verifySessionValue,
+} from "./auth";
 import { TEST_AUTH, clearTestAuth, installTestAuth } from "./test-auth";
 
 function request(headers: HeadersInit): Request {
@@ -34,6 +39,34 @@ describe("getAuthContext", () => {
     expect(ctx).toEqual({
       orgId: TEST_AUTH.orgId,
       actor: { actorType: "agent", actorId: TEST_AUTH.actorId },
+    });
+  });
+
+  it("denies missing, invalid, and tampered session cookies", () => {
+    installTestAuth();
+    expect(getAuthContext(request({}))).toBeNull();
+    expect(
+      getAuthContext(request({ cookie: `${SESSION_COOKIE}=not-a-signature` })),
+    ).toBeNull();
+
+    const valid = signSessionValue(TEST_AUTH.token);
+    const tampered = `${valid.slice(0, -1)}${valid.endsWith("a") ? "b" : "a"}`;
+    expect(verifySessionValue(TEST_AUTH.token, tampered)).toBe(false);
+    expect(
+      getAuthContext(request({ cookie: `${SESSION_COOKIE}=${tampered}` })),
+    ).toBeNull();
+  });
+
+  it("maps a valid session cookie to the server org and a human actor", () => {
+    installTestAuth();
+    const signed = signSessionValue(TEST_AUTH.token);
+    const ctx = getAuthContext(
+      request({ cookie: `${SESSION_COOKIE}=${signed}` }),
+    );
+    expect(ctx?.orgId).toBe(TEST_AUTH.orgId);
+    expect(ctx?.actor).toEqual({
+      actorType: "human",
+      actorId: TEST_AUTH.actorId,
     });
   });
 

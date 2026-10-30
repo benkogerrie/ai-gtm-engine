@@ -7,6 +7,7 @@ import {
   fitScoreSchema,
   fitTierSchema,
   icpStatusSchema,
+  inferenceModeSchema,
   leadStageSchema,
   outreachChannelSchema,
   outreachStatusSchema,
@@ -59,6 +60,12 @@ export const icpSchema = entityBaseSchema.extend({
   triggerEvents: stringListSchema,
   confidenceScores: z.record(z.string(), confidenceSchema),
   expansionSuggestions: stringListSchema,
+  version: z.number().int().min(1),
+  parentIcpId: uuidSchema.nullable(),
+  approvedAt: z.coerce.date().nullable(),
+  approvedBy: z.string().nullable(),
+  inferenceMode: inferenceModeSchema,
+  structured: jsonValueSchema,
 });
 export type Icp = z.infer<typeof icpSchema>;
 
@@ -75,6 +82,12 @@ export const createIcpInputSchema = icpSchema
     triggerEvents: stringListSchema.default([]),
     confidenceScores: z.record(z.string(), confidenceSchema).default({}),
     expansionSuggestions: stringListSchema.default([]),
+    version: z.number().int().min(1).default(1),
+    parentIcpId: uuidSchema.nullable().default(null),
+    approvedAt: z.coerce.date().nullable().default(null),
+    approvedBy: z.string().nullable().default(null),
+    inferenceMode: inferenceModeSchema.default("mock"),
+    structured: jsonValueSchema.default({}),
   });
 export type CreateIcpInput = z.input<typeof createIcpInputSchema>;
 

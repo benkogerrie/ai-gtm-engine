@@ -7,6 +7,10 @@ export const DOMAIN_ERROR_CODES = [
   "CITATION_ORG_MISMATCH",
   "ENTITY_NOT_FOUND",
   "ENTITY_ORG_MISMATCH",
+  "ICP_INFERENCE_INVALID",
+  "ICP_NOT_FOUND",
+  "ICP_ORG_MISMATCH",
+  "EXPANSION_NOT_FOUND",
 ] as const;
 
 export type DomainErrorCode = (typeof DOMAIN_ERROR_CODES)[number];
