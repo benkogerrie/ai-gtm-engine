@@ -54,6 +54,12 @@ Open [http://localhost:3000](http://localhost:3000). Health check: [http://local
 4. `pnpm test`
 5. `pnpm build`
 
+## Deploy
+
+Preview deployments are created automatically by [Vercel](https://vercel.com)’s GitHub integration for every pull-request branch. Opening or updating a PR is enough; do not run `vercel` CLI deploy commands from this repository.
+
+There is **no production deploy** until a merge to `main` is approved. The hello-world app needs no environment variables on Vercel.
+
 ## Roadmap
 
 | ID | Scope |
