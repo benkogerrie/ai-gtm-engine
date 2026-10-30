@@ -1,5 +1,7 @@
 # Seed to Saga — System Design (for judges)
 
+🎬 Demo video: [docs/demo/seed-to-saga-demo.mp4](demo/seed-to-saga-demo.mp4)
+
 > `SYSTEM_DESIGN.pdf` in this folder is an earlier design baseline (branch b004a). This `.md` describes the current build, and the code is the source of truth.
 
 ## 1. What it does
